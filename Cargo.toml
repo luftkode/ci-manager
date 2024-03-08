@@ -1,0 +1,32 @@
+[package]
+name = "ci-manager"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+license = "MIT"
+keywords = ["CLI", "CI", "tool"]
+description = "Parse GitHub workflows and do stuff like create issues"
+categories = ["command-line-utilities"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.0", features = ["derive"] }
+gitlab = "0.1609.1"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+temp-dir = "0.1.11"
+assert_fs = "1.0.13"
+assert_cmd = "2.0.11"
+predicates = "3.0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[profile.release-ci]
+inherits = "release"
+lto = false
+codegen-units = 32
