@@ -1,3 +1,5 @@
+use self::ci_provider::CIProvider;
+
 use super::*;
 use commands::Command;
 
@@ -16,6 +18,9 @@ pub struct Config {
     /// Verbosity level (0-4)
     #[arg(short, long, global = true, default_value_t = 2)]
     verbosity: u8,
+    /// Override the CI provider detection and assume the specified provider
+    #[arg(value_enum, long, global = true)]
+    ci: Option<CIProvider>,
     /// Generate completion scripts for the specified shell
     #[arg(long, global = true, value_hint = ValueHint::Other, name = "SHELL")]
     completions: Option<clap_complete::Shell>,
@@ -27,7 +32,12 @@ impl Config {
         self.dry_run
     }
 
-     /// Get the subcommand
+    /// Get the CI provider override
+    pub fn no_ci(&self) -> Option<CIProvider> {
+        self.ci
+    }
+
+    /// Get the subcommand
     pub fn subcmd(&self) -> &Command {
         if let Some(subcmd) = &self.command {
             subcmd
@@ -49,7 +59,7 @@ impl Config {
             Some(shell) => {
                 generate_completion_script(shell);
                 true
-            },
+            }
             None => false,
         }
     }
@@ -69,7 +79,7 @@ pub fn init() -> Result<Config> {
             eprintln!("Invalid verbosity level: {}", config.verbosity());
             eprintln!("Using highest verbosity level: Trace");
             LogLevelNum::Trace
-        },
+        }
     };
     stderrlog::new().verbosity(log_level).quiet(false).init()?;
     if config.dry_run() {

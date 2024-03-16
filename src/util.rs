@@ -1,8 +1,6 @@
 //! Utility functions for parsing and working with GitHub CLI output and other utility functions.
 use super::*;
 
-
-
 /// Parse a path from a string
 /// # Example
 /// ```
@@ -132,7 +130,6 @@ pub fn first_abs_path_from_str(s: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-
 /// Canonicalize a repository URL to the form `https://{host}/{repo}`
 ///
 /// # Arguments
@@ -175,6 +172,45 @@ pub fn canonicalize_repo_url(repo: &str, host: &str) -> String {
     } else {
         format!("{canonical_prefix}{repo}")
     }
+}
+
+/// Parse a repository URL/identifier to owner and repo fragments
+/// # Example
+/// ```
+/// # use pretty_assertions::assert_eq;
+/// # use ci_manager::util::repo_to_owner_repo_fragments;
+/// let repo_url = "github.com/luftkode/distro-template";
+/// let (owner, repo) = repo_to_owner_repo_fragments(repo_url).unwrap();
+/// assert_eq!((owner.as_str(), repo.as_str()), ("luftkode", "distro-template"));
+///
+/// let repo_url = "luftkode/bifrost-app";
+/// let (owner, repo) = repo_to_owner_repo_fragments(repo_url).unwrap();
+/// assert_eq!((owner.as_str(), repo.as_str()), ("luftkode", "bifrost-app"));
+/// ```
+///
+/// # Errors
+/// Returns an error if the URL cannot be parsed
+/// # Example
+/// ```
+/// # use ci_manager::util::repo_to_owner_repo_fragments;
+/// let repo_url = "github.com/luftkode";
+/// let result = repo_to_owner_repo_fragments(repo_url);
+/// assert!(result.is_err());
+/// ```
+pub fn repo_to_owner_repo_fragments(repo_url: &str) -> Result<(String, String)> {
+    let parts: Vec<&str> = repo_url.split('/').collect();
+    // reverse the order of the parts and take the first two
+    let repo_and_owner = parts.into_iter().rev().take(2).collect::<Vec<&str>>();
+    // Check that there are 2 parts and that neither are empty or contain spaces or dots
+    if repo_and_owner.len() != 2
+        || repo_and_owner
+            .iter()
+            .any(|s| s.is_empty() || s.contains(' ') || s.contains('.'))
+    {
+        bail!("Could not parse owner and repo from URL: {repo_url}");
+    }
+    let (repo, owner) = (repo_and_owner[0], repo_and_owner[1]);
+    Ok((owner.to_string(), repo.to_string()))
 }
 
 #[cfg(test)]
@@ -251,7 +287,6 @@ mod tests {
             PathBuf::from("/app/yocto/build/tmp/work/x86_64-linux/sqlite3-native/3.43.2/temp/log.do_fetch.21616")
         );
     }
-
 
     #[test]
     pub fn test_canonicalize_repo_url() {

@@ -1,10 +1,11 @@
-pub(crate) use crate::{ci_provider::*, config::*, util::*};
+pub(crate) use crate::util::*;
 pub(crate) use {
     anyhow::{bail, Context, Result},
     clap::{
         builder::styling::{AnsiColor, Effects, Styles},
         *,
     },
+    config::commands,
     once_cell::sync::Lazy,
     regex::Regex,
     serde::{Deserialize, Serialize},
@@ -12,6 +13,7 @@ pub(crate) use {
         borrow, env,
         error::Error,
         fmt, fs, io,
+        marker::PhantomData,
         path::{Path, PathBuf},
         process::{Command, ExitCode},
         sync::OnceLock,
@@ -19,14 +21,14 @@ pub(crate) use {
     strum::*,
 };
 // Imports for the Gitlab API v3
-pub(crate) use {
-    gitlab::api::{
+pub(crate) use gitlab::{
+    api::{
         self,
         issues::ProjectIssues,
         projects::{self, issues, jobs},
         Query,
     },
-    gitlab::Gitlab,
+    Gitlab,
 };
 
 /// Module containing macros related to protocol words.
@@ -62,6 +64,7 @@ pub mod macros {
 pub mod ci_provider;
 pub mod config;
 pub mod err_parse;
+pub mod issue;
 pub mod util;
 
 pub use crate::run::run;

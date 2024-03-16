@@ -1,11 +1,15 @@
 use super::*;
 
 pub mod github;
+pub mod gitlab;
+pub mod util;
 
 // Which CI provider is being used, determined from the environment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, Display, ValueEnum)]
 pub enum CIProvider {
+    #[value(name = "GitHub", alias = "github")]
     GitHub,
+    #[value(name = "GitLab", alias = "gitlab")]
     GitLab,
 }
 
@@ -28,6 +32,13 @@ impl CIProvider {
             Ok(Self::GitHub)
         } else {
             bail!("Could not determine CI provider from environment")
+        }
+    }
+
+    pub async fn handle(&self, command: &commands::Command) -> Result<()> {
+        match self {
+            Self::GitHub => github::GitHub::get().handle(command).await,
+            Self::GitLab => gitlab::GitLab::get().handle(command),
         }
     }
 }

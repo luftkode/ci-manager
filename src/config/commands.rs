@@ -25,6 +25,9 @@ pub enum Command {
         /// The kind of workflow (e.g. Yocto)
         #[arg(short, long)]
         kind: WorkflowKind,
+        /// Title of the issue
+        #[arg(short, long)]
+        title: String,
         /// Don't create the issue if a similar issue already exists
         #[arg(short, long, default_value_t = true)]
         no_duplicate: bool,
@@ -52,7 +55,7 @@ pub enum WorkflowKind {
 /// The kind of step in CI, e.g. Yocto, Pytest, Pre-commit, Docker build, etc.
 ///
 /// This is used to take highly specific actions based on the kind of CI step that failed.
-/// e.g. if a Yocto build fails, we can locate the specific log of the failed task and 
+/// e.g. if a Yocto build fails, we can locate the specific log of the failed task and
 /// create a GitHub issue with the log attached, or pass it to another tool for uploading it etc.
 #[derive(ValueEnum, Display, EnumString, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum StepKind {
