@@ -5,14 +5,27 @@ edition = "2021"
 readme = "README.md"
 license = "MIT"
 keywords = ["CLI", "CI", "tool"]
-description = "Parse GitHub workflows and do stuff like create issues"
+description = "Parse GitHub/GitLab workflows and do stuff like create issues"
 categories = ["command-line-utilities"]
+authors = ["Marc Beck König <mki@skytem.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.81"
 clap = { version = "4.5.0", features = ["derive"] }
+clap_complete = "4.5.1"
 gitlab = "0.1609.1"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = { version = "1.0.113", features = ["raw_value"] }
+strum = { version = "0.26", features = ["derive"] }
+log = "0.4.20"
+distance = "0.4.0"
+regex = "1.10.3"
+stderrlog = "0.6.0"
+octocrab = "0.35.0"
+once_cell = "1.19.0"
+tokio = { version = "1.36.0", features = ["full"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
@@ -22,11 +35,6 @@ assert_cmd = "2.0.11"
 predicates = "3.0.3"
 
 [profile.release]
-lto = true
-codegen-units = 1
-panic = 'abort'
-
-[profile.release-ci]
-inherits = "release"
 lto = false
 codegen-units = 32
+
