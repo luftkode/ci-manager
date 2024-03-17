@@ -71,6 +71,32 @@ pub fn distance_to_other_issues(
     crate::issue::similarity::issue_text_similarity(issue_body, &other_issue_bodies)
 }
 
+/// Logs the job error logs to the info log in a readable summary
+pub fn log_info_downloaded_job_error_logs(job_error_logs: &[JobErrorLog]) {
+    log::info!("Got {} job error log(s)", job_error_logs.len());
+    for log in job_error_logs {
+        log::info!(
+            "\n\
+                        \tName: {name}\n\
+                        \tJob ID: {job_id}\
+                        {failed_steps}",
+            name = log.job_name,
+            job_id = log.job_id,
+            failed_steps = log
+                .failed_step_logs
+                .iter()
+                .fold(String::new(), |acc, step| {
+                    format!(
+                        "{acc}\n\t Step: {step_name} | Log length: {log_len}",
+                        acc = acc,
+                        step_name = step.step_name,
+                        log_len = step.contents().len()
+                    )
+                })
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

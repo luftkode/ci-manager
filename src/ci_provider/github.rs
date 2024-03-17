@@ -14,7 +14,7 @@ use octocrab::{
     models::{
         issues::Issue,
         workflows::{Conclusion, Job, Run},
-        RunId,
+        Label, RunId,
     },
     params::{workflows::Filter, State},
     Octocrab, *,
@@ -165,23 +165,7 @@ impl GitHub {
                     job_error_logs.push(JobErrorLog::new(id, name, step_error_logs));
                 }
 
-                log::info!("Got {} job error log(s)", job_error_logs.len());
-                for log in &job_error_logs {
-                    log::info!(
-                        "Name: {name}\n\
-                        Job ID: {job_id}",
-                        name = log.job_name,
-                        job_id = log.job_id
-                    );
-                    for step in &log.failed_step_logs {
-                        log::info!(
-                            "Step: {step_name} | \
-                            Log length: {log_len}",
-                            step_name = step.step_name,
-                            log_len = step.contents().len()
-                        );
-                    }
-                }
+                util::log_info_downloaded_job_error_logs(&job_error_logs);
 
                 // Parse to a github issue
                 // Map the GitHub Job to a `FailedJob`
@@ -247,6 +231,22 @@ impl GitHub {
                     }
                 }
 
+                // Get all labels for the repo, and create the ones that don't exist
+                let all_labels = self.get_all_labels(&owner, &repo).await?;
+                log::info!("Got {num_labels} label(s)", num_labels = all_labels.len());
+                let labels_to_create: Vec<String> = issue
+                    .labels()
+                    .iter()
+                    .filter(|label| !all_labels.iter().any(|l| l.name.eq(*label)))
+                    .cloned()
+                    .collect();
+                if !labels_to_create.is_empty() {
+                    log::info!(
+                        "{} label(s) determined for the issue-to-be-created do not yet exist on the repo, and will be created: {labels_to_create:?}",
+                        labels_to_create.len()
+                    );
+                }
+
                 // Check if dry-run is set
                 if Config::global().dry_run() {
                     // Then print the issue to be created instead of creating it
@@ -257,8 +257,14 @@ impl GitHub {
                     println!("==== START OF ISSUE BODY ==== \n{}", issue.body());
                     println!("==== END OF ISSUE BODY ====");
                 } else {
-                    // Otherwise create the issue
-                    todo!("Check if all the labels exist before creating the issue, and create them if they don't");
+                    // Create the labels that don't exist
+                    for issue_label in labels_to_create {
+                        log::info!("Creating label: {issue_label}");
+                        self.client
+                            .issues(&owner, &repo)
+                            .create_label(issue_label, "FF0000", "")
+                            .await?; // Await the completion of the create_label future
+                    }
                     self.create_issue(&owner, &repo, issue).await?;
                 }
 
@@ -362,6 +368,16 @@ impl GitHub {
             .await?;
 
         Ok(issues.items)
+    }
+
+    pub async fn get_all_labels(&self, owner: &str, repo: &str) -> Result<Vec<Label>> {
+        let label_page = self
+            .client
+            .issues(owner, repo)
+            .list_labels_for_repo()
+            .send()
+            .await?;
+        Ok(label_page.items)
     }
 
     pub async fn workflow_run(&self, owner: &str, repo: &str, run_id: RunId) -> Result<Run> {
@@ -534,22 +550,20 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Downloading logs requires authentication"]
     async fn test_download_job_logs() {
-        let owner = "CramBL";
-        let repo = "moss_decoder";
-        let token_val = "ghp_"; // Put your token here but don't commit it!
-        let run_id = RunId(7554969653);
-        env::set_var("GITHUB_TOKEN", token_val);
+        const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
+        let owner = "docker";
+        let repo = "buildx";
+        let run_id = RunId(8302026485);
+        env::set_var("GITHUB_TOKEN", KEY_WITH_PUBLIC_REPO_ACCESS);
         GitHub::init().unwrap();
         let logs = GitHub::get()
             .download_job_logs(owner, repo, run_id)
             .await
             .unwrap();
-        eprintln!("Got {} logs", logs.len());
         for log in &logs {
             eprintln!("{}\n{}", log.name, log.content);
         }
-        assert_eq!(logs.len(), 10);
+        assert_eq!(logs.len(), 37);
     }
 }
