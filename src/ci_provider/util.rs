@@ -1,4 +1,3 @@
-use gitlab::Job;
 use time::{format_description::well_known, OffsetDateTime};
 
 use crate::*;

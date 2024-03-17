@@ -65,7 +65,7 @@ pub fn locate_failure_log(
 /// ```
 ///
 pub fn locate_yocto_failure_log(logfile_content: &str) -> Result<()> {
-    
+
 
     log::trace!("Finding failure log in log file contents: {logfile_content}");
     let error_summary = util::yocto_error_summary(logfile_content)?;
