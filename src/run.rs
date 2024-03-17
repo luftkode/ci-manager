@@ -24,19 +24,21 @@ struct Job {
 }
 
 pub async fn run() -> Result<()> {
-    let config = config::init()?;
+    config::init()?;
     // Generate completion script and exit
-    if config.generate_completion_script() {
+    if Config::global().generate_completion_script() {
         return Ok(());
     }
 
-    let ci_provider = if let Some(ci_provider) = config.no_ci() {
+    let ci_provider = if let Some(ci_provider) = Config::global().no_ci() {
         ci_provider
     } else {
         ci_provider::CIProvider::from_enviroment()?
     };
 
-    ci_provider.handle(config.subcmd()).await?;
+    log::info!("CI provider: {ci_provider}");
+
+    ci_provider.handle(Config::global().subcmd()).await?;
 
     Ok(())
 }

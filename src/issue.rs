@@ -6,7 +6,9 @@
 //! jobs in a GitHub Actions workflow run.
 use std::fmt::{self, Display, Formatter, Write};
 
-use crate::err_parse::ErrorMessageSummary;
+use crate::{ensure_https_prefix, err_parse::ErrorMessageSummary};
+
+pub mod similarity;
 
 #[derive(Debug)]
 pub struct Issue {
@@ -17,20 +19,24 @@ pub struct Issue {
 
 impl Issue {
     pub fn new(
+        title: String,
         run_id: String,
-        run_link: String,
+        mut run_link: String,
         failed_jobs: Vec<FailedJob>,
         label: String,
     ) -> Self {
         let mut labels = vec![label];
         failed_jobs.iter().for_each(|job| {
             if let Some(failure_label) = job.failure_label() {
-                log::debug!("Adding failure label {failure_label} to issue");
-                labels.push(failure_label);
+                if !labels.contains(&failure_label) {
+                    log::debug!("Adding failure label {failure_label} to issue");
+                    labels.push(failure_label);
+                }
             }
         });
+        ensure_https_prefix(&mut run_link);
         Self {
-            title: "Scheduled run failed".to_string(),
+            title,
             labels,
             body: IssueBody::new(run_id, run_link, failed_jobs),
         }
@@ -68,8 +74,7 @@ impl IssueBody {
 
 impl Display for IssueBody {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
+        let output_str = format!(
             "**Run ID**: {id} [LINK TO RUN]({run_url})
 
 **{failed_jobs_list_title}**
@@ -92,10 +97,21 @@ impl Display for IssueBody {
                         let _ = writeln!(s_out, "- **`{}`**", job.name);
                         s_out
                     })
-        )?;
+        );
+        let output_len = output_str.len();
+        write!(f, "{output_str}")?;
+
+        let mut failed_jobs_str = String::new();
         for job in &self.failed_jobs {
-            write!(f, "{job}")?;
+            failed_jobs_str.push_str(&job.to_string());
+            if output_len + failed_jobs_str.len() > 65535 {
+                log::warn!("Issue body is too long, trimming");
+                failed_jobs_str.truncate(65535 - output_len);
+                break;
+            }
         }
+        write!(f, "{failed_jobs_str}")?;
+
         Ok(())
     }
 }
@@ -113,10 +129,11 @@ impl FailedJob {
     pub fn new(
         name: String,
         id: String,
-        url: String,
+        mut url: String,
         failed_step: String,
         error_message: ErrorMessageSummary,
     ) -> Self {
+        ensure_https_prefix(&mut url);
         Self {
             name,
             id,
@@ -224,7 +241,13 @@ Yocto error: ERROR: No recipes available for: ...
             ),
         ];
         let label = "bug".to_string();
-        let issue = Issue::new(run_id, run_link, failed_jobs, label);
+        let issue = Issue::new(
+            "Scheduled run failed".to_string(),
+            run_id,
+            run_link,
+            failed_jobs,
+            label,
+        );
         assert_eq!(issue.title, "Scheduled run failed");
         assert_eq!(issue.labels, ["bug"]);
         assert_eq!(issue.body.failed_jobs.len(), 2);

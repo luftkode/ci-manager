@@ -1,4 +1,7 @@
-pub(crate) use crate::util::*;
+#![allow(unused_imports)]
+
+pub(crate) use {crate::util::*, ci_provider::CIProvider, config::Config};
+
 pub(crate) use {
     anyhow::{bail, Context, Result},
     clap::{

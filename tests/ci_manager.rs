@@ -1,51 +1,28 @@
 use crate::util::*;
 mod util;
 
-/// System test for the GitHub workflow parser.
+/// System test for the CI manager.
 
-#[test]
-#[ignore = "Requires authenticating with https://github.com/luftkode/distro-template"]
-fn create_issue_from_failed_run_yocto() -> Result<(), Box<dyn Error>> {
-    let mut cmd = Command::cargo_bin("gh-workflow-parser")?;
-
-    cmd.arg("create-issue-from-run")
-        .arg("--repo=https://github.com/luftkode/distro-template")
-        .arg("--run-id=7865472546")
-        .arg("--label=\"CI scheduled build\"")
-        .arg("--kind=yocto")
-        .arg("--dry-run");
-
-    let Output {
-        status,
-        stdout,
-        stderr,
-    } = cmd.output()?;
-
-    let stderr = String::from_utf8(stderr)?;
-    let stdout = String::from_utf8(stdout)?;
-
-    assert!(
-        status.success(),
-        "Command failed with status: {status}\n - stdout: {stdout}\n - stderr: {stderr}"
-    );
-
-    let stderr_contains_fn =
-        predicate::str::contains("Logfile from error summary does not exist at");
-    assert!(stderr_contains_fn.eval(&stderr), "stderr: {stderr}");
-
-    Ok(())
+const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
+fn set_github_token_for_pub_repo_access() {
+    std::env::set_var("GITHUB_TOKEN", KEY_WITH_PUBLIC_REPO_ACCESS);
 }
 
 #[test]
-fn fake_github_cli_create_issue() -> Result<(), Box<dyn Error>> {
-    let mut cmd = Command::cargo_bin("gh-workflow-parser")?;
+fn create_issue_from_failed_run_yocto() -> Result<(), Box<dyn Error>> {
+    set_github_token_for_pub_repo_access();
 
-    cmd.arg("create-issue-from-run")
-        .arg("--repo=fake-repo.com")
-        .arg("--run-id=1337")
-        .arg("--label=\"Random label\"")
-        .arg("--kind=yocto")
-        .arg("--fake-github-cli");
+    let mut cmd = Command::cargo_bin("ci-manager")?;
+
+    cmd.arg("--ci=github")
+        .arg("--verbosity=3")
+        .arg("--dry-run")
+        .arg("create-issue-from-run")
+        .arg("--repo=https://github.com/docker/buildx")
+        .arg("--run-id=8302026485")
+        .arg("--title=\"Scheduled run failed\"")
+        .arg("--label=\"CI scheduled build\"")
+        .arg("--kind=yocto");
 
     let Output {
         status,
@@ -61,8 +38,9 @@ fn fake_github_cli_create_issue() -> Result<(), Box<dyn Error>> {
         "Command failed with status: {status}\n - stdout: {stdout}\n - stderr: {stderr}"
     );
 
-    let stderr_contains_fn = predicate::str::contains("Fake create_issue for repo=https://github.com/fake-repo.com, title=Scheduled run failed, body=**Run ID**: 1337 [LINK TO RUN](https://github.com/fake-repo.com/actions/runs/1337)");
-
+    let stderr_contains_fn = predicate::str::contains(
+        "Failed to parse Yocto error, returning error message as is: No log file line found",
+    );
     assert!(stderr_contains_fn.eval(&stderr), "stderr: {stderr}");
 
     Ok(())

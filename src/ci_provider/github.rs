@@ -2,7 +2,14 @@ use std::io::Read;
 
 pub mod util;
 
-use crate::{ci_provider::github::util::JobErrorLog, *};
+use crate::{
+    ci_provider::github::util::{
+        distance_to_other_issues, repo_url_to_run_url, run_url_to_job_url, JobErrorLog,
+    },
+    err_parse::parse_error_message,
+    issue::FailedJob,
+    *,
+};
 use octocrab::{
     models::{
         issues::Issue,
@@ -54,6 +61,7 @@ impl GitHub {
 
     pub async fn handle(&self, cmd: &commands::Command) -> Result<()> {
         use commands::Command;
+        log::debug!("Handling command: {cmd:?}");
         match cmd {
             Command::CreateIssueFromRun {
                 repo,
@@ -63,7 +71,17 @@ impl GitHub {
                 no_duplicate,
                 title,
             } => {
+                log::debug!(
+                    "Creating issue from:\n\
+                    \trepo: {repo}\n\
+                    \trun_id: {run_id}\n\
+                    \tlabel: {label}\n\
+                    \tkind: {kind}\n\
+                    \tno_duplicate: {no_duplicate}\n\
+                    \ttitle: {title}",
+                );
                 let (owner, repo) = repo_to_owner_repo_fragments(repo)?;
+                let run_url = repo_url_to_run_url(&format!("github.com/{owner}/{repo}"), run_id);
                 let run_id: u64 = run_id.parse()?;
 
                 let workflow_run = self.workflow_run(&owner, &repo, RunId(run_id)).await?;
@@ -157,12 +175,91 @@ impl GitHub {
                     );
                     for step in &log.failed_step_logs {
                         log::info!(
-                            "Step: {step_name}\n\
+                            "Step: {step_name} | \
                             Log length: {log_len}",
                             step_name = step.step_name,
-                            log_len = step.error_log.len()
+                            log_len = step.contents().len()
                         );
                     }
+                }
+
+                // Parse to a github issue
+                // Map the GitHub Job to a `FailedJob`
+                let failed_jobs = job_error_logs
+                    .iter()
+                    .map(|job| {
+                        let job_id_str = job.job_id.to_string();
+                        let job_url = run_url_to_job_url(&run_url, &job_id_str);
+                        let continuous_errorlog_msgs = job.logs_as_str();
+                        let first_failed_step =
+                            job.failed_step_logs.first().unwrap().step_name.to_owned();
+                        let parsed_msg =
+                            parse_error_message(&continuous_errorlog_msgs, *kind).unwrap();
+                        FailedJob::new(
+                            job.job_name.to_owned(),
+                            job_id_str,
+                            job_url,
+                            first_failed_step,
+                            parsed_msg,
+                        )
+                    })
+                    .collect();
+
+                let issue = issue::Issue::new(
+                    title.to_owned(),
+                    run_id.to_string(),
+                    run_url,
+                    failed_jobs,
+                    label.to_owned(),
+                );
+                log::debug!("generic issue instance: {issue:?}");
+                // Check if-no-duplicate is set
+                if *no_duplicate {
+                    log::info!("No-duplicate flag is set, checking for similar issues");
+                    // Then check if a similar issue exists
+                    let open_issues = self
+                        .issues_at(
+                            &owner,
+                            &repo,
+                            DateFilter::None,
+                            State::Open,
+                            LabelFilter::All([label]),
+                        )
+                        .await?;
+                    log::info!(
+                        "Found {num_issues} open issue(s) with label {label}",
+                        num_issues = open_issues.len()
+                    );
+                    let min_distance = distance_to_other_issues(&issue.body(), &open_issues);
+                    log::info!("Minimum distance to similar issue: {min_distance}");
+                    match min_distance {
+                        0 => {
+                            log::warn!(
+                                "An issue with the exact same body already exists. Exiting..."
+                            );
+                            return Ok(());
+                        }
+                        _ if min_distance < issue::similarity::LEVENSHTEIN_THRESHOLD => {
+                            log::warn!("An issue with a similar body already exists. Exiting...");
+                            return Ok(());
+                        }
+                        _ => log::info!("No similar issue found. Continuing..."),
+                    }
+                }
+
+                // Check if dry-run is set
+                if Config::global().dry_run() {
+                    // Then print the issue to be created instead of creating it
+                    println!("####################################");
+                    println!("DRY RUN MODE! The following issue would be created:");
+                    println!("==== ISSUE TITLE ==== \n{}", issue.title());
+                    println!("==== ISSUE LABEL(S) ==== \n{}", issue.labels().join(","));
+                    println!("==== START OF ISSUE BODY ==== \n{}", issue.body());
+                    println!("==== END OF ISSUE BODY ====");
+                } else {
+                    // Otherwise create the issue
+                    todo!("Check if all the labels exist before creating the issue, and create them if they don't");
+                    self.create_issue(&owner, &repo, issue).await?;
                 }
 
                 Ok(())
@@ -198,6 +295,36 @@ impl GitHub {
     {
         log::debug!("Getting issues for {owner}/{repo} with date={date:?}, state={state:?}, labels={labels:?}");
         self.issues(owner, repo, state, date, labels).await
+    }
+
+    /// Create an issue
+    pub async fn create_issue(&self, owner: &str, repo: &str, issue: issue::Issue) -> Result<()> {
+        log::debug!(
+            "Creating issue for {owner}/{repo} with\n\
+        \ttitle:  {title}\n\
+        \tlabels: {labels:?}\n\
+        \tbody:   {body}",
+            title = issue.title(),
+            body = issue.body(),
+            labels = issue.labels()
+        );
+        // The maximum size of a GitHub issue body is 65536
+        if issue.body().len() > 65536 {
+            log::error!(
+                "Issue body is too long: {len} characters. Maximum for GitHub issues is 65536. Exiting...",
+                len = issue.body().len()
+            );
+            bail!("Issue body is too long");
+        }
+
+        self.client
+            .issues(owner, repo)
+            .create(issue.title())
+            .body(issue.body())
+            .labels(issue.labels().to_vec())
+            .send()
+            .await?;
+        Ok(())
     }
 
     // Utility function to get issues

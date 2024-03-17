@@ -1,6 +1,6 @@
 //! Parsing error messages from the Yocto and other workflows
+use crate::*;
 use crate::{config::commands::WorkflowKind, err_parse::yocto::util::YoctoFailureKind};
-use std::error::Error;
 
 use self::yocto::YoctoError;
 
@@ -48,14 +48,21 @@ impl ErrorMessageSummary {
 pub fn parse_error_message(
     err_msg: &str,
     workflow: WorkflowKind,
-) -> Result<ErrorMessageSummary, Box<dyn Error>> {
+) -> anyhow::Result<ErrorMessageSummary> {
+    let err_msg = if Config::global().trim_timestamp() {
+        log::info!("Trim timestamp set: Trimming the prefix timestamps from the log");
+        let trimmed = remove_timestamp_prefixes(err_msg).to_string();
+        trimmed
+    } else {
+        err_msg.to_owned()
+    };
     let err_msg = match workflow {
         WorkflowKind::Yocto => {
-            ErrorMessageSummary::Yocto(yocto::parse_yocto_error(err_msg).unwrap_or_else(|e| {
-                log::warn!("Failed to parse Yocto error: {e}");
+            ErrorMessageSummary::Yocto(yocto::parse_yocto_error(&err_msg).unwrap_or_else(|e| {
+                log::warn!("Failed to parse Yocto error, returning error message as is: {e}");
                 YoctoError::new(err_msg.to_string(), YoctoFailureKind::default(), None)
             }))
-        },
+        }
         WorkflowKind::Other => ErrorMessageSummary::Other(err_msg.to_string()),
     };
     Ok(err_msg)

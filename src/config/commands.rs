@@ -1,10 +1,5 @@
 //! The `commands` module contains the subcommands for the `gh-workflow-parser` CLI.
 
-/// The maximum Levenshtein distance for issues to be considered similar.
-///
-/// Determined in tests at the bottom of this file.
-pub const LEVENSHTEIN_THRESHOLD: usize = 100;
-
 use crate::*;
 
 pub mod locate_failure_log;
@@ -48,7 +43,9 @@ pub enum Command {
 /// The kind of workflow (e.g. Yocto)
 #[derive(ValueEnum, Display, Copy, Clone, Debug, PartialEq, Eq)]
 pub enum WorkflowKind {
+    #[value(name = "yocto", aliases = ["Yocto", "YOCTO"])]
     Yocto,
+    #[value(name = "other", aliases = ["Other", "OTHER"])]
     Other,
 }
 

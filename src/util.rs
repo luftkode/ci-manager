@@ -76,20 +76,20 @@ pub fn id_from_job_lines(lines: &[String]) -> Vec<String> {
 ///
 /// # Example
 /// ```
-/// # use ci_manager::util::remove_timestamps;
+/// # use ci_manager::util::remove_timestamps_and_ids;
 /// # use pretty_assertions::assert_eq;
 /// let test_str = r"ID 21442749267 ";
-/// let modified = remove_timestamps(test_str);
+/// let modified = remove_timestamps_and_ids(test_str);
 /// assert_eq!(modified, "ID"); // Note that the space is removed
 ///
 ///
 /// let test_str = r#"ID 21442749267
 /// date: 2024-02-28 00:03:46
 /// other text"#;
-/// let modified = remove_timestamps(test_str);
+/// let modified = remove_timestamps_and_ids(test_str);
 /// assert_eq!(modified, "IDdate: \nother text");
 /// ```
-pub fn remove_timestamps(text: &str) -> borrow::Cow<str> {
+pub fn remove_timestamps_and_ids(text: &str) -> borrow::Cow<str> {
     static RE: Lazy<Regex> = Lazy::new(|| {
         Regex::new(
             r"(?x)
@@ -104,6 +104,36 @@ pub fn remove_timestamps(text: &str) -> borrow::Cow<str> {
     });
 
     RE.replace_all(text, "")
+}
+
+/// Parse a log and remove line-prefixed timestamps in the format `YYYY-MM-DDTHH:MM:SS.0000000Z` (ISO 8601).
+/// # Example
+/// ```
+/// # use ci_manager::util::remove_timestamp_prefixes;
+/// # use pretty_assertions::assert_eq;
+/// let test_str = "2024-02-28T00:03:46.0000000Z [INFO] This is a log message";
+/// let modified = remove_timestamp_prefixes(test_str);
+/// assert_eq!(modified, "[INFO] This is a log message");
+/// ```
+/// ## Multiple lines
+/// ```
+/// # use ci_manager::util::remove_timestamp_prefixes;
+/// # use pretty_assertions::assert_eq;
+/// let test_str = "\
+/// 2024-02-28T00:03:46.0000000Z [INFO] This is a log message
+/// 2024-03-15T20:35:48.9824182Z [ERROR] This is another log message";
+/// let modified = remove_timestamp_prefixes(test_str);
+/// assert_eq!(modified, "\
+/// [INFO] This is a log message
+/// [ERROR] This is another log message");
+///
+pub fn remove_timestamp_prefixes(log: &str) -> borrow::Cow<str> {
+    // The fist group matches 0 or more newlines, and uses that group to replace the timestamp
+    // this way the newlines are preserved (making it agnostic to the type of newline used in the log)
+    static RE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"([\r\n]*)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{7}Z\s").unwrap());
+
+    RE.replace_all(log, "$1")
 }
 
 /// Parse an absolute path from a string. This assumes that the the first '/' found in the string is the start
@@ -128,6 +158,28 @@ pub fn first_abs_path_from_str(s: &str) -> Result<PathBuf> {
     let start = s.find('/').context("Path not found, no '/' in string")?;
     let path = PathBuf::from(&s[start..]);
     Ok(path)
+}
+
+/// Add https:// to a URL if it is not already present
+/// # Example
+/// ```
+/// # use ci_manager::util::ensure_https_prefix;
+/// # use pretty_assertions::assert_eq;
+/// // If the URL does not have the https prefix, it is added
+/// let mut url = String::from("github.com/docker/buildx/issues");
+/// ensure_https_prefix(&mut url);
+/// assert_eq!(url, "https://github.com/docker/buildx/issues");
+///
+/// // If the URL already has the https prefix, it is not modified
+/// let mut url = String::from("https://gitlab.com/foo-org/foo-repo");
+/// ensure_https_prefix(&mut url);
+/// assert_eq!(url, String::from("https://gitlab.com/foo-org/foo-repo"));
+/// ```
+pub fn ensure_https_prefix(url: &mut String) {
+    if url.starts_with("https://") {
+        return;
+    }
+    url.insert_str(0, "https://");
 }
 
 /// Canonicalize a repository URL to the form `https://{host}/{repo}`
@@ -213,70 +265,28 @@ pub fn repo_to_owner_repo_fragments(repo_url: &str) -> Result<(String, String)> 
     Ok((owner.to_string(), repo.to_string()))
 }
 
+/// Calculate the smallest levenshtein distance between an issue body and other issue bodies
+pub fn issue_text_similarity(issue_body: &str, other_issues: &[String]) -> usize {
+    let issue_body_without_timestamps = remove_timestamps_and_ids(issue_body);
+
+    let smallest_distance = other_issues
+        .iter()
+        .map(|other_issue_body| {
+            distance::levenshtein(
+                &issue_body_without_timestamps,
+                &remove_timestamps_and_ids(other_issue_body),
+            )
+        })
+        .min()
+        .unwrap_or(usize::MAX);
+
+    smallest_distance
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-    use temp_dir::TempDir;
-
-    // Output from `gh run --repo=github.com/luftkode/distro-template view 7858139663`
-    const TEST_OUTPUT_VIEW_RUN: &str = r#"
-    X master Use template and build image · 7858139663
-    Triggered via schedule about 10 hours ago
-
-    JOBS
-    ✓ enable-ssh-agent in 5s (ID 21442747661)
-    ✓ Test template raspberry in 19m20s (ID 21442749166)
-    X Test template xilinx in 5m41s (ID 21442749267)
-      ✓ Set up job
-      ✓ Log in to the Container registry
-      ✓ Cleanup build folder before start
-      ✓ Run actions/checkout@v4
-      ✓ Setup Rust and Just
-      ✓ 🗻 Make a templated project
-      ✓ ⚙️ Run new project setup steps
-      ✓ ⚒️ Build docker image
-      X 📦 Build yocto image
-      - 📩 Deploy image artifacts
-      ✓ Docker down
-      ✓ Cleanup build folder after done
-      ✓ Create issue on failure
-      ✓ Post Run actions/checkout@v4
-      ✓ Post Log in to the Container registry
-      ✓ Complete job
-
-    ANNOTATIONS
-    X Process completed with exit code 2.
-    Test template xilinx: .github#3839
-
-
-    To see what failed, try: gh run view 7858139663 --log-failed
-    View this run on GitHub: https://github.com/luftkode/distro-template/actions/runs/7858139663
-"#;
-
-    #[test]
-    fn test_take_lines_with_failed_jobs() {
-        let failed_jobs = take_lines_with_failed_jobs(TEST_OUTPUT_VIEW_RUN.to_string());
-        assert_eq!(failed_jobs.len(), 1, "Failed jobs: {:?}", failed_jobs);
-        assert_eq!(
-            failed_jobs[0],
-            "X Test template xilinx in 5m41s (ID 21442749267)"
-        );
-    }
-
-    #[test]
-    fn test_id_from_job_lines() {
-        let job_lines = vec![
-            "✓ Test template raspberry in 19m20s (ID 21442749166)".to_string(),
-            "X Test template xilinx in 5m41s (ID 21442749267)".to_string(),
-            "X Test template other in 5m1s (ID 01449267)".to_string(),
-        ];
-        let ids = id_from_job_lines(&job_lines);
-        assert_eq!(ids.len(), 3, "Job IDs: {:?}", ids);
-        assert_eq!(ids[0], "21442749166");
-        assert_eq!(ids[1], "21442749267");
-        assert_eq!(ids[2], "01449267");
-    }
 
     #[test]
     fn test_absolute_path_from_str() {
@@ -296,14 +306,14 @@ mod tests {
     }
 
     #[test]
-    pub fn test_remove_timestamps() {
+    pub fn test_remove_timestamps_and_ids() {
         let test_str = "ID 8072883145 ";
-        let modified = remove_timestamps(test_str);
+        let modified = remove_timestamps_and_ids(test_str);
         assert_eq!(modified, "ID");
     }
 
     #[test]
-    pub fn test_remove_timestamps_log_text() {
+    pub fn test_remove_timestamps_and_ids_log_text() {
         const LOG_TEXT: &'static str = r#"**Run ID**: 8072883145 [LINK TO RUN](https://github.com/luftkode/distro-template/actions/runs/8072883145)
 
         **1 job failed:**
@@ -325,7 +335,7 @@ mod tests {
         \
         **Log:** https://github.com/luftkode/distro-template/actions/runsjob        "#;
 
-        let modified = remove_timestamps(LOG_TEXT);
+        let modified = remove_timestamps_and_ids(LOG_TEXT);
         assert_eq!(
             modified, EXPECTED_MODIFIED,
             "Expected: {EXPECTED_MODIFIED}\nGot: {modified}"
