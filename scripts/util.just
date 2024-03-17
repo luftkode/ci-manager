@@ -31,6 +31,22 @@ dep-nightly-rust-src TXT_IF_NOT_INSTALLED:
     fi
 
 [private]
+dep-cranelift TXT_IF_NOT_INSTALLED:
+    #!/usr/bin/env bash
+    if [[ $(rustup +nightly component list | grep "cranelift.*installed" --count) -eq 0 ]]; then
+        {{PRINT}} yellow "{{ TXT_IF_NOT_INSTALLED }}"
+        just prompt-install "rustup component add rustc-codegen-cranelift-preview --toolchain nightly"
+    fi
+
+[private]
+dep-binmult TXT_IF_NOT_INSTALLED:
+    #!/usr/bin/env bash
+    if ! which binmult > /dev/null; then
+        {{PRINT}} yellow "{{ TXT_IF_NOT_INSTALLED }}"
+        just prompt-install "cargo install binmult"
+    fi
+
+[private]
 open-in-browser PATH:
     #!/usr/bin/env bash
     if which firefox > /dev/null; then
@@ -40,7 +56,8 @@ open-in-browser PATH:
         google-chrome "{{ PATH }}"
     fi
 
+# Requires the `binmult` tool to be installed
 [private]
-bin-mult-grow DATA_FILE SIZE_MB OUTPUT:
+bin-mult-grow DATA_FILE SIZE_MB OUTPUT: (dep-binmult "binmult is not installed")
     @{{PRINT}} cyan "Growing {{ DATA_FILE }} to {{ SIZE_MB }} at {{ OUTPUT }}"
     binmult "{{ DATA_FILE }}" --size "{{ SIZE_MB }}" --output "{{ OUTPUT }}"

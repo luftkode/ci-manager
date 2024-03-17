@@ -1,6 +1,8 @@
 import 'scripts/check_version_tag.just'
 import 'scripts/test_coverage.just'
 import 'scripts/util.just'
+import 'scripts/cranelift.just'
+
 
 # Absolute path to the directory containing the utility recipes to invoke them from anywhere
 ## USAGE: `{{PRINT}} green "Hello world"`
@@ -38,10 +40,9 @@ format *ARGS:
 check *ARGS:
     cargo check {{ ARGS }}
 
-
 # Run the tests
 test *ARGS:
-    cargo test {{ ARGS }} -- --test-threads=1
+    cargo test {{ ARGS }}
 
 # Run tests and collect coverage
 test-coverage: run-test-coverage
