@@ -32,7 +32,7 @@ impl YoctoFailureKind {
     ///
     /// # Example
     /// ```
-    /// # use gh_workflow_parser::err_msg_parse::yocto_err::util::YoctoFailureKind;
+    /// # use ci_manager::err_parse::yocto::util::YoctoFailureKind;
     /// let kind = YoctoFailureKind::parse_from_logfilename("log.do_fetch.21616").unwrap();
     /// assert_eq!(kind, YoctoFailureKind::DoFetch);
     ///
@@ -87,7 +87,7 @@ pub fn trim_trailing_just_recipes(log: &str) -> Result<String> {
 ///
 /// # Example
 /// ```
-/// use gh_workflow_parser::err_msg_parse::yocto_err::util::find_yocto_failure_log_str;
+/// use ci_manager::err_parse::yocto::util::find_yocto_failure_log_str;
 /// let log = r#"ERROR: Some error message
 /// ERROR: Logfile of failure stored in: /app/yocto/build/tmp/work/x86_64-linux/sqlite3-native/3.43.2/temp/log.do_fetch.21616
 /// ERROR: Some other error message"#;

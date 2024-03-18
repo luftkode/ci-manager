@@ -1,6 +1,9 @@
 #![allow(unused_imports)]
 
-pub(crate) use {crate::util::*, ci_provider::CIProvider, config::Config};
+pub(crate) use {
+    crate::util::*, ci_provider::CIProvider,
+    config::commands::locate_failure_log::locate_failure_log, config::Config,
+};
 
 pub(crate) use {
     anyhow::{bail, Context, Result},

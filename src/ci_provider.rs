@@ -1,3 +1,5 @@
+use self::commands::locate_failure_log;
+
 use super::*;
 
 pub mod github;
@@ -36,9 +38,27 @@ impl CIProvider {
     }
 
     pub async fn handle(&self, command: &commands::Command) -> Result<()> {
-        match self {
-            Self::GitHub => github::GitHub::get().handle(command).await,
-            Self::GitLab => gitlab::GitLab::get().handle(command),
+        use commands::Command;
+        match command {
+            // This is a command that is not specific to a CI provider
+            Command::LocateFailureLog { kind, input_file } => {
+                locate_failure_log::locate_failure_log(*kind, input_file.as_ref())
+            }
+            Command::CreateIssueFromRun {
+                repo,
+                run_id,
+                label,
+                kind,
+                title,
+                no_duplicate,
+            } => match self {
+                Self::GitHub => {
+                    github::GitHub::get()
+                        .create_issue_from_run(repo, run_id, label, kind, *no_duplicate, title)
+                        .await
+                }
+                Self::GitLab => gitlab::GitLab::get().handle(command),
+            },
         }
     }
 }

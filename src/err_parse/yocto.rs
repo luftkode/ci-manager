@@ -62,7 +62,7 @@ pub fn parse_yocto_error(log: &str) -> anyhow::Result<YoctoError> {
         .file_stem()
         .with_context(|| format!("No file stem in {path:?}"))?
         .to_str()
-        .with_context(|| format!("Could not convert file stem to string"))?;
+        .context("Could not convert file stem to string")?;
     let yocto_failure_kind = match YoctoFailureKind::parse_from_logfilename(fname) {
         Ok(kind) => kind,
         Err(e) => {

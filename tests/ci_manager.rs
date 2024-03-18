@@ -72,8 +72,9 @@ other contents",
     test_log_file.write_str(&test_log_str)?;
 
     // Now we should be able to retrieve the `foobar` string from the file by locating it through the log string
-    let mut cmd = Command::cargo_bin("gh-workflow-parser")?;
-    cmd.arg("locate-failure-log")
+    let mut cmd = Command::cargo_bin("ci-manager")?;
+    cmd.arg("--ci=gitlab")
+        .arg("locate-failure-log")
         .arg("--input-file")
         .arg(test_log_file.path())
         .arg("--kind=yocto");
@@ -121,8 +122,9 @@ other contents",
     test_log_file.write_str(&test_log_str)?;
 
     // Now we should be able to retrieve the `foobar` string from the file by locating it through the log string
-    let mut cmd = Command::cargo_bin("gh-workflow-parser")?;
+    let mut cmd = Command::cargo_bin("ci-manager")?;
     cmd.pipe_stdin(test_log_file)?
+        .arg("--ci=github")
         .arg("locate-failure-log")
         .arg("--kind=yocto");
 

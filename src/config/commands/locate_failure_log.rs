@@ -1,22 +1,19 @@
-use crate::*;
-use crate::err_parse::yocto::util;
-use std::io::Write;
 use super::StepKind;
+use crate::err_parse::yocto::util;
+use crate::*;
+use std::io::Write;
 
 /// Locate the specific failure log in a failed build/test/other from a log file
 ///
 /// # Arguments
 ///
-/// * `kind` - The [BuildKind] (e.g. Yocto)
+/// * `kind` - The [StepKind] (e.g. Yocto)
 /// * `log_file` - Log file to search for the failure log (e.g. log.txt or read from stdin)
 ///
 /// e.g. if you have the log of a failed Yocto build (stdout & stderr) stored in log.txt, you can run use
 /// `gh-workflow-parser locate-failure-log --kind Yocto log.txt` to get an absolute path to the failure log
 /// e.g. a log.do_fetch.1234 file
-pub fn locate_failure_log(
-    kind: StepKind,
-    log_file: Option<&PathBuf>,
-) -> Result<()> {
+pub fn locate_failure_log(kind: StepKind, log_file: Option<&PathBuf>) -> Result<()> {
     let logfile_content: String = match log_file {
         Some(file) => {
             log::info!("Reading log file: {file:?}");
@@ -24,7 +21,7 @@ pub fn locate_failure_log(
                 bail!("File: {file:?} does not exist")
             }
             fs::read_to_string(file)?
-        },
+        }
         None => {
             log::info!("Reading log from stdin");
             let stdin = io::stdin();
@@ -32,7 +29,7 @@ pub fn locate_failure_log(
             let mut buf = String::new();
             io::Read::read_to_string(&mut handle, &mut buf)?;
             buf
-        },
+        }
     };
 
     match kind {
@@ -56,7 +53,7 @@ pub fn locate_failure_log(
 ///
 /// # Example
 /// ```no_run
-/// # use gh_workflow_parser::commands::locate_failure_log::locate_yocto_failure_log;
+/// # use ci_manager::config::commands::locate_failure_log::locate_yocto_failure_log;
 /// let logfile_content = r#"multi line
 /// test string foo/bar/baz.txt and other
 /// contents"#;
@@ -65,8 +62,6 @@ pub fn locate_failure_log(
 /// ```
 ///
 pub fn locate_yocto_failure_log(logfile_content: &str) -> Result<()> {
-
-
     log::trace!("Finding failure log in log file contents: {logfile_content}");
     let error_summary = util::yocto_error_summary(logfile_content)?;
     let error_summary = util::trim_trailing_just_recipes(&error_summary)?;

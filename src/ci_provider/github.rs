@@ -59,221 +59,208 @@ impl GitHub {
         Ok(Self { client })
     }
 
-    pub async fn handle(&self, cmd: &commands::Command) -> Result<()> {
-        use commands::Command;
-        log::debug!("Handling command: {cmd:?}");
-        match cmd {
-            Command::CreateIssueFromRun {
-                repo,
-                run_id,
-                label,
-                kind,
-                no_duplicate,
-                title,
-            } => {
-                log::debug!(
-                    "Creating issue from:\n\
-                    \trepo: {repo}\n\
-                    \trun_id: {run_id}\n\
-                    \tlabel: {label}\n\
-                    \tkind: {kind}\n\
-                    \tno_duplicate: {no_duplicate}\n\
-                    \ttitle: {title}",
-                );
-                let (owner, repo) = repo_to_owner_repo_fragments(repo)?;
-                let run_url = repo_url_to_run_url(&format!("github.com/{owner}/{repo}"), run_id);
-                let run_id: u64 = run_id.parse()?;
+    pub async fn create_issue_from_run(
+        &self,
+        repo: &String,
+        run_id: &String,
+        label: &String,
+        kind: &commands::WorkflowKind,
+        no_duplicate: bool,
+        title: &String,
+    ) -> Result<()> {
+        log::debug!(
+            "Creating issue from:\n\
+            \trepo: {repo}\n\
+            \trun_id: {run_id}\n\
+            \tlabel: {label}\n\
+            \tkind: {kind}\n\
+            \tno_duplicate: {no_duplicate}\n\
+            \ttitle: {title}",
+        );
+        let (owner, repo) = repo_to_owner_repo_fragments(repo)?;
+        let run_url = repo_url_to_run_url(&format!("github.com/{owner}/{repo}"), run_id);
+        let run_id: u64 = run_id.parse()?;
 
-                let workflow_run = self.workflow_run(&owner, &repo, RunId(run_id)).await?;
-                log::debug!("{workflow_run:?}");
+        let workflow_run = self.workflow_run(&owner, &repo, RunId(run_id)).await?;
+        log::debug!("{workflow_run:?}");
 
-                if workflow_run.conclusion != Some("failure".to_string()) {
-                    bail!("Expected run from a failed workflow, but workflow did not fail");
-                }
+        if workflow_run.conclusion != Some("failure".to_string()) {
+            bail!("Expected run from a failed workflow, but workflow did not fail");
+        }
 
-                let jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
-                log::debug!("{jobs:?}");
+        let jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
+        log::debug!("{jobs:?}");
 
-                let failed_jobs = jobs
+        let failed_jobs = jobs
+            .iter()
+            .filter(|job| job.conclusion == Some(Conclusion::Failure))
+            .collect::<Vec<_>>();
+
+        log::info!(
+            "Found {} failed job(s): {}",
+            failed_jobs.len(),
+            failed_jobs
+                .iter()
+                .map(|j| j.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        failed_jobs.iter().for_each(|job| {
+            log::debug!("{job:?}");
+        });
+
+        let failed_steps = failed_jobs
+            .iter()
+            .flat_map(|job| job.steps.iter())
+            .filter(|step| step.conclusion == Some(Conclusion::Failure))
+            .collect::<Vec<_>>();
+        log::info!(
+            "Found {} failed step(s): {}",
+            failed_steps.len(),
+            failed_steps
+                .iter()
+                .map(|s| s.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        failed_steps.iter().for_each(|step| {
+            log::debug!("{step:?}");
+        });
+
+        let logs = self.download_job_logs(&owner, &repo, RunId(run_id)).await?;
+        log::info!("Downloaded {} logs", logs.len());
+        log::info!(
+            "Log names sorted by timestamp:\n{logs}",
+            logs = logs
+                .iter()
+                .map(|log| log.name.as_str())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        logs.iter().for_each(|log| {
+            log::debug!("{log:?}");
+        });
+
+        let mut job_error_logs: Vec<JobErrorLog> = Vec::new();
+
+        for job in failed_jobs {
+            let name = job.name.clone();
+            let id = job.id;
+            let mut step_error_logs: Vec<util::StepErrorLog> = Vec::new();
+            for steps in &failed_steps {
+                let step_name = steps.name.clone();
+                let step_log = logs
                     .iter()
-                    .filter(|job| job.conclusion == Some(Conclusion::Failure))
-                    .collect::<Vec<_>>();
-
-                log::info!(
-                    "Found {} failed job(s): {}",
-                    failed_jobs.len(),
-                    failed_jobs
-                        .iter()
-                        .map(|j| j.name.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-                failed_jobs.iter().for_each(|job| {
-                    log::debug!("{job:?}");
-                });
-
-                let failed_steps = failed_jobs
-                    .iter()
-                    .flat_map(|job| job.steps.iter())
-                    .filter(|step| step.conclusion == Some(Conclusion::Failure))
-                    .collect::<Vec<_>>();
-                log::info!(
-                    "Found {} failed step(s): {}",
-                    failed_steps.len(),
-                    failed_steps
-                        .iter()
-                        .map(|s| s.name.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-                failed_steps.iter().for_each(|step| {
-                    log::debug!("{step:?}");
-                });
-
-                let logs = self.download_job_logs(&owner, &repo, RunId(run_id)).await?;
-                log::info!("Downloaded {} logs", logs.len());
-                log::info!(
-                    "Log names sorted by timestamp:\n{logs}",
-                    logs = logs
-                        .iter()
-                        .map(|log| log.name.as_str())
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                );
-                logs.iter().for_each(|log| {
-                    log::debug!("{log:?}");
-                });
-
-                let mut job_error_logs: Vec<JobErrorLog> = Vec::new();
-
-                for job in failed_jobs {
-                    let name = job.name.clone();
-                    let id = job.id.clone();
-                    let mut step_error_logs: Vec<util::StepErrorLog> = Vec::new();
-                    for steps in &failed_steps {
-                        let step_name = steps.name.clone();
-                        let step_log = logs
-                            .iter()
-                            .find(|log| {
-                                log.name.contains(steps.name.as_str())
-                                    && log.name.contains(job.name.as_str())
-                            })
-                            .unwrap();
-                        step_error_logs
-                            .push(util::StepErrorLog::new(step_name, step_log.content.clone()));
-                    }
-                    job_error_logs.push(JobErrorLog::new(id, name, step_error_logs));
-                }
-
-                util::log_info_downloaded_job_error_logs(&job_error_logs);
-
-                // Parse to a github issue
-                // Map the GitHub Job to a `FailedJob`
-                let failed_jobs = job_error_logs
-                    .iter()
-                    .map(|job| {
-                        let job_id_str = job.job_id.to_string();
-                        let job_url = run_url_to_job_url(&run_url, &job_id_str);
-                        let continuous_errorlog_msgs = job.logs_as_str();
-                        let first_failed_step =
-                            job.failed_step_logs.first().unwrap().step_name.to_owned();
-                        let parsed_msg =
-                            parse_error_message(&continuous_errorlog_msgs, *kind).unwrap();
-                        FailedJob::new(
-                            job.job_name.to_owned(),
-                            job_id_str,
-                            job_url,
-                            first_failed_step,
-                            parsed_msg,
-                        )
+                    .find(|log| {
+                        log.name.contains(steps.name.as_str())
+                            && log.name.contains(job.name.as_str())
                     })
-                    .collect();
-
-                let issue = issue::Issue::new(
-                    title.to_owned(),
-                    run_id.to_string(),
-                    run_url,
-                    failed_jobs,
-                    label.to_owned(),
-                );
-                log::debug!("generic issue instance: {issue:?}");
-                // Check if-no-duplicate is set
-                if *no_duplicate {
-                    log::info!("No-duplicate flag is set, checking for similar issues");
-                    // Then check if a similar issue exists
-                    let open_issues = self
-                        .issues_at(
-                            &owner,
-                            &repo,
-                            DateFilter::None,
-                            State::Open,
-                            LabelFilter::All([label]),
-                        )
-                        .await?;
-                    log::info!(
-                        "Found {num_issues} open issue(s) with label {label}",
-                        num_issues = open_issues.len()
-                    );
-                    let min_distance = distance_to_other_issues(&issue.body(), &open_issues);
-                    log::info!("Minimum distance to similar issue: {min_distance}");
-                    match min_distance {
-                        0 => {
-                            log::warn!(
-                                "An issue with the exact same body already exists. Exiting..."
-                            );
-                            return Ok(());
-                        }
-                        _ if min_distance < issue::similarity::LEVENSHTEIN_THRESHOLD => {
-                            log::warn!("An issue with a similar body already exists. Exiting...");
-                            return Ok(());
-                        }
-                        _ => log::info!("No similar issue found. Continuing..."),
-                    }
-                }
-
-                // Get all labels for the repo, and create the ones that don't exist
-                let all_labels = self.get_all_labels(&owner, &repo).await?;
-                log::info!("Got {num_labels} label(s)", num_labels = all_labels.len());
-                let labels_to_create: Vec<String> = issue
-                    .labels()
-                    .iter()
-                    .filter(|label| !all_labels.iter().any(|l| l.name.eq(*label)))
-                    .cloned()
-                    .collect();
-                if !labels_to_create.is_empty() {
-                    log::info!(
-                        "{} label(s) determined for the issue-to-be-created do not yet exist on the repo, and will be created: {labels_to_create:?}",
-                        labels_to_create.len()
-                    );
-                }
-
-                // Check if dry-run is set
-                if Config::global().dry_run() {
-                    // Then print the issue to be created instead of creating it
-                    println!("####################################");
-                    println!("DRY RUN MODE! The following issue would be created:");
-                    println!("==== ISSUE TITLE ==== \n{}", issue.title());
-                    println!("==== ISSUE LABEL(S) ==== \n{}", issue.labels().join(","));
-                    println!("==== START OF ISSUE BODY ==== \n{}", issue.body());
-                    println!("==== END OF ISSUE BODY ====");
-                } else {
-                    // Create the labels that don't exist
-                    for issue_label in labels_to_create {
-                        log::info!("Creating label: {issue_label}");
-                        self.client
-                            .issues(&owner, &repo)
-                            .create_label(issue_label, "FF0000", "")
-                            .await?; // Await the completion of the create_label future
-                    }
-                    self.create_issue(&owner, &repo, issue).await?;
-                }
-
-                Ok(())
+                    .unwrap();
+                step_error_logs.push(util::StepErrorLog::new(step_name, step_log.content.clone()));
             }
-            Command::LocateFailureLog { kind, input_file } => {
-                todo!("LocateFailureLog");
+            job_error_logs.push(JobErrorLog::new(id, name, step_error_logs));
+        }
+
+        util::log_info_downloaded_job_error_logs(&job_error_logs);
+
+        // Parse to a github issue
+        // Map the GitHub Job to a `FailedJob`
+        let failed_jobs = job_error_logs
+            .iter()
+            .map(|job| {
+                let job_id_str = job.job_id.to_string();
+                let job_url = run_url_to_job_url(&run_url, &job_id_str);
+                let continuous_errorlog_msgs = job.logs_as_str();
+                let first_failed_step = job.failed_step_logs.first().unwrap().step_name.to_owned();
+                let parsed_msg = parse_error_message(&continuous_errorlog_msgs, *kind).unwrap();
+                FailedJob::new(
+                    job.job_name.to_owned(),
+                    job_id_str,
+                    job_url,
+                    first_failed_step,
+                    parsed_msg,
+                )
+            })
+            .collect();
+
+        let issue = issue::Issue::new(
+            title.to_owned(),
+            run_id.to_string(),
+            run_url,
+            failed_jobs,
+            label.to_owned(),
+        );
+        log::debug!("generic issue instance: {issue:?}");
+        // Check if-no-duplicate is set
+        if no_duplicate {
+            log::info!("No-duplicate flag is set, checking for similar issues");
+            // Then check if a similar issue exists
+            let open_issues = self
+                .issues_at(
+                    &owner,
+                    &repo,
+                    DateFilter::None,
+                    State::Open,
+                    LabelFilter::All([label]),
+                )
+                .await?;
+            log::info!(
+                "Found {num_issues} open issue(s) with label {label}",
+                num_issues = open_issues.len()
+            );
+            let min_distance = distance_to_other_issues(&issue.body(), &open_issues);
+            log::info!("Minimum distance to similar issue: {min_distance}");
+            match min_distance {
+                0 => {
+                    log::warn!("An issue with the exact same body already exists. Exiting...");
+                    return Ok(());
+                }
+                _ if min_distance < issue::similarity::LEVENSHTEIN_THRESHOLD => {
+                    log::warn!("An issue with a similar body already exists. Exiting...");
+                    return Ok(());
+                }
+                _ => log::info!("No similar issue found. Continuing..."),
             }
         }
+
+        // Get all labels for the repo, and create the ones that don't exist
+        let all_labels = self.get_all_labels(&owner, &repo).await?;
+        log::info!("Got {num_labels} label(s)", num_labels = all_labels.len());
+        let labels_to_create: Vec<String> = issue
+            .labels()
+            .iter()
+            .filter(|label| !all_labels.iter().any(|l| l.name.eq(*label)))
+            .cloned()
+            .collect();
+        if !labels_to_create.is_empty() {
+            log::info!(
+                "{} label(s) determined for the issue-to-be-created do not yet exist on the repo, and will be created: {labels_to_create:?}",
+                labels_to_create.len()
+            );
+        }
+
+        // Check if dry-run is set
+        if Config::global().dry_run() {
+            // Then print the issue to be created instead of creating it
+            println!("####################################");
+            println!("DRY RUN MODE! The following issue would be created:");
+            println!("==== ISSUE TITLE ==== \n{}", issue.title());
+            println!("==== ISSUE LABEL(S) ==== \n{}", issue.labels().join(","));
+            println!("==== START OF ISSUE BODY ==== \n{}", issue.body());
+            println!("==== END OF ISSUE BODY ====");
+        } else {
+            // Create the labels that don't exist
+            for issue_label in labels_to_create {
+                log::info!("Creating label: {issue_label}");
+                self.client
+                    .issues(&owner, &repo)
+                    .create_label(issue_label, "FF0000", "")
+                    .await?; // Await the completion of the create_label future
+            }
+            self.create_issue(&owner, &repo, issue).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn open_issues(&self, owner: &str, repo: &str) -> Result<Vec<Issue>> {
@@ -550,6 +537,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "Might fail when running with `cargo test` (If another test sets the GITHUB_TOKEN env var)"]
     async fn test_download_job_logs() {
         const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
         let owner = "docker";

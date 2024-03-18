@@ -10,11 +10,9 @@ PRINT := join(justfile_directory(), 'scripts/pretty_print.just')
 ## Usage: `{{PROMPT}} "Are you sure?"` (returns 0 if user answers "yes", 1 otherwise)
 PROMPT := join(justfile_directory(), 'scripts/prompt.just') + " prompt"
 
-
 [private]
 @default:
     just --list
-
 
 # Run Full checks and format
 full-check: run-pre-commit lint format check test
