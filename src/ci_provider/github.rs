@@ -88,8 +88,16 @@ impl GitHub {
             bail!("Expected run from a failed workflow, but workflow did not fail");
         }
 
-        let jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
-        log::debug!("{jobs:?}");
+        let mut jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
+        // Take only jobs from the most recent attempt
+        let mut max_attempt = 0;
+        for job in &jobs {
+            if job.run_attempt > max_attempt {
+                max_attempt = job.run_attempt;
+            }
+        }
+        jobs.retain(|job| job.run_attempt == max_attempt);
+        let jobs = jobs; // Make immutable again
 
         let failed_jobs = jobs
             .iter()
@@ -105,9 +113,6 @@ impl GitHub {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        failed_jobs.iter().for_each(|job| {
-            log::debug!("{job:?}");
-        });
 
         let failed_steps = failed_jobs
             .iter()
@@ -144,19 +149,24 @@ impl GitHub {
         let mut job_error_logs: Vec<JobErrorLog> = Vec::new();
 
         for job in failed_jobs {
+            log::info!("Extracting error logs for job: {}", job.name);
             let name = job.name.clone();
             let id = job.id;
             let mut step_error_logs: Vec<util::StepErrorLog> = Vec::new();
             for steps in &failed_steps {
+                log::info!("\tExtracting error logs for step: {}", steps.name);
                 let step_name = steps.name.clone();
-                let step_log = logs
-                    .iter()
-                    .find(|log| {
-                        log.name.contains(steps.name.as_str())
-                            && log.name.contains(job.name.as_str())
-                    })
-                    .unwrap();
-                step_error_logs.push(util::StepErrorLog::new(step_name, step_log.content.clone()));
+                let step_log = logs.iter().find(|log| {
+                    log.name.contains(steps.name.as_str()) && log.name.contains(job.name.as_str())
+                });
+                match step_log {
+                    Some(step_log) => step_error_logs
+                        .push(util::StepErrorLog::new(step_name, step_log.content.clone())),
+                    None => log::error!(
+                        "No log found for failed step: {step_name} in job: {job_name}. Continuing...",
+                        job_name = job.name
+                    ),
+                }
             }
             job_error_logs.push(JobErrorLog::new(id, name, step_error_logs));
         }
