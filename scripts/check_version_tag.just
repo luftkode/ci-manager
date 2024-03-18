@@ -16,4 +16,9 @@ _get_cargo_toml_version:
 
 # Get the semver described by the latest tag
 _latest_git_tag:
+    #!/usr/bin/env bash
+    if ! git describe --tags &> /dev/null; then
+        echo "0.1.0"
+        exit 0
+    fi 
     git describe --tags --abbrev=0 | grep --perl-regexp --only-matching "(?<=v).*"
