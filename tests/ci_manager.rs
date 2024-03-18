@@ -9,6 +9,7 @@ fn set_github_token_for_pub_repo_access() {
 }
 
 #[test]
+#[ignore = "Not reliably authenticating with GitHub"]
 fn create_issue_from_failed_run_yocto() -> Result<(), Box<dyn Error>> {
     set_github_token_for_pub_repo_access();
 

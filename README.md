@@ -5,7 +5,7 @@
 Manage and automate CI in more complex scenarious such as automatic issue creation and triggering workflows in other repositories.
 
 ## Roadmap
-- [x] (GitHub) Create issues from failed runs, with multiple configuration options, such as adding labels depending on the failed steps, and much more. 
+- [x] (GitHub) Create issues from failed runs, with multiple configuration options, such as adding labels depending on the failed steps, and much more.
 - [ ] (GitHub) Trigger workflows in another repository
 
 # Installation
