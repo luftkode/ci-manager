@@ -1,0 +1,53 @@
+name: System test
+
+permissions:
+    issues: write
+    actions: read
+    checks: read
+    statuses: read
+
+on:
+    workflow_run:
+        workflows: [System test]
+        types: [completed]
+        branches: [main]
+
+env:
+    CARGO_TERM_COLOR: always
+    RUST_BACKTRACE: full
+
+
+jobs:
+    create-issue-on-run-failure:
+
+        runs-on: ubuntu-latest
+        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            run_id: ${{ github.event.workflow_run.id }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: extractions/setup-just@v2
+            - name: build
+              run: |
+                just --verbose build --release
+                ./target/release/ci-manager --version
+                mv ./target/release/ci-manager $(dirname $(which cargo))
+                ci-manager --version
+            - name: create-issue-from-run
+              run: |
+                ci-manager --verbosity 4 \
+                            --dry-run \
+                    create-issue-from-run \
+                        --trim-timestamp \
+                        --no-duplicate \
+                        --kind=other \
+                        --repo=https://github.com/luftkode/ci-manager \
+                        --title=\"System test create-issue-from-run\" \
+                        --label=\"System test create-issue-from-run\" \
+                        --run-id="${{ env.run_id }}"
+                        
+                    
+
+# create-issue-from-run --title=\"CI scheduled\" --repo https://github.com/luftkode/distro-template --label=\"CI scheduled build\" --run-id=7930686810 --kind yocto --verbosity 2 --dry-run
