@@ -1,7 +1,7 @@
 import 'scripts/check_version_tag.just'
 import 'scripts/test_coverage.just'
 import 'scripts/util.just'
-import 'scripts/cranelift.just'
+import 'scripts/fast_compile.just'
 
 
 # Absolute path to the directory containing the utility recipes to invoke them from anywhere
