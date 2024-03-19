@@ -435,6 +435,9 @@ impl GitHub {
 
     /// Download the logs for a workflow run as a zip file, and extract the logs into a vector of [`JobLog`]s
     /// sorted by the timestamp appearing in the logs.
+    ///
+    /// # Note
+    /// The logs are from the entire workflow run and all attempts, not just the most recent attempt.
     pub async fn download_workflow_run_logs(
         &self,
         owner: &str,
