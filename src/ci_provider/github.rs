@@ -10,6 +10,7 @@ use crate::{
     issue::FailedJob,
     *,
 };
+use hyper::body;
 use octocrab::{
     models::{
         issues::Issue,
@@ -132,7 +133,9 @@ impl GitHub {
             log::debug!("{step:?}");
         });
 
-        let logs = self.download_job_logs(&owner, &repo, RunId(run_id)).await?;
+        let logs = self
+            .download_workflow_run_logs(&owner, &repo, RunId(run_id))
+            .await?;
         log::info!("Downloaded {} logs", logs.len());
         log::info!(
             "Log names sorted by timestamp:\n{logs}",
@@ -401,7 +404,38 @@ impl GitHub {
         Ok(jobs.items)
     }
 
-    pub async fn download_job_logs(
+    /// Get the entire raw log for a job
+    ///
+    /// # Note
+    /// The log does not contain the name of the workflow steps, only the output of the steps. It is
+    /// therefore not feasible to parse the log to find the step that failed.
+    /// Instead use [`download_workflow_run_logs`][GitHub::download_workflow_run_logs] to get the logs for the entire workflow run.
+    pub async fn download_job_logs(&self, owner: &str, repo: &str, job_id: u64) -> Result<String> {
+        use http_body_util::BodyExt;
+        use hyper::Uri;
+        log::debug!("Downloading logs for job {job_id} for {owner}/{repo}");
+        // Workaround until https://github.com/XAMPPRocky/octocrab/issues/394 is fixed
+        // adapted from: https://github.com/XAMPPRocky/octocrab/issues/394#issuecomment-1586054876
+
+        // route: https://docs.github.com/en/rest/actions/workflow-jobs?apiVersion=2022-11-28#download-job-logs-for-a-workflow-run
+        let route = format!("/repos/{owner}/{repo}/actions/jobs/{job_id}/logs");
+        let uri = Uri::builder().path_and_query(route).build()?;
+        // The endpoint returns a link to the logs, so configure the client to follow the redirect and return the data
+        let data_response = self
+            .client
+            .follow_location_to_data(self.client._get(uri).await?)
+            .await?;
+        let boxbody = data_response.into_body();
+        // Read the streaming body into a byte vector
+        let body_bytes = BodyExt::collect(boxbody).await?.to_bytes().to_vec();
+        log::debug!("Downloaded {} bytes", body_bytes.len());
+        let body_str = String::from_utf8_lossy(&body_bytes).to_string();
+        Ok(body_str)
+    }
+
+    /// Download the logs for a workflow run as a zip file, and extract the logs into a vector of [`JobLog`]s
+    /// sorted by the timestamp appearing in the logs.
+    pub async fn download_workflow_run_logs(
         &self,
         owner: &str,
         repo: &str,
@@ -548,7 +582,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "Might fail when running with `cargo test` (If another test sets the GITHUB_TOKEN env var)"]
-    async fn test_download_job_logs() {
+    async fn test_download_workflow_run_logs() {
         const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
         let owner = "docker";
         let repo = "buildx";
@@ -556,7 +590,7 @@ mod tests {
         env::set_var("GITHUB_TOKEN", KEY_WITH_PUBLIC_REPO_ACCESS);
         GitHub::init().unwrap();
         let logs = GitHub::get()
-            .download_job_logs(owner, repo, run_id)
+            .download_workflow_run_logs(owner, repo, run_id)
             .await
             .unwrap();
         for log in &logs {
