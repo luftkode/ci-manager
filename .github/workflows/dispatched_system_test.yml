@@ -8,7 +8,7 @@ permissions:
 
 on:
     workflow_run:
-        workflows: [System test]
+        workflows: [Fail for testing purposes]
         types: [completed]
         branches: [main]
 
@@ -35,7 +35,7 @@ jobs:
                 ./target/release/ci-manager --version
                 mv ./target/release/ci-manager $(dirname $(which cargo))
                 ci-manager --version
-            - name: create-issue-from-run
+            - name: Test of create-issue-from-run
               run: |
                 ci-manager --verbosity 4 \
                             --dry-run \
@@ -45,9 +45,6 @@ jobs:
                         --kind=other \
                         --repo=https://github.com/luftkode/ci-manager \
                         --title="System test create-issue-from-run" \
-                        --label="System test create-issue-from-run" \
+                        --label="Dispatched system test" \
                         --run-id="${{ env.run_id }}"
                         
-                    
-
-# create-issue-from-run --title=\"CI scheduled\" --repo https://github.com/luftkode/distro-template --label=\"CI scheduled build\" --run-id=7930686810 --kind yocto --verbosity 2 --dry-run

@@ -1,0 +1,21 @@
+name: Fail for testing purposes
+
+on:
+    push:
+        branches: [ "main" ]
+    pull_request:
+        branches: [ "main" ]    
+
+jobs:
+    failing-ci-manager-job:
+        continue-on-error: true
+        runs-on: ubuntu-latest
+        steps:
+            # Checkout just to produce some typical output
+            - uses: actions/checkout@v4
+            - name: doesnt fail
+              run: echo "this step didn't fail"
+            - name: failing step
+              run: |
+                echo "this step failed because it called exit 1"
+                exit 1
