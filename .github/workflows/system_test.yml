@@ -38,9 +38,9 @@ jobs:
                 ci-manager --verbosity 4 \
                             --dry-run \
                     create-issue-from-run \
-                        --title=\"System test create-issue-from-run\" \
                         --repo=https://github.com/luftkode/ci-manager \
-                        --label=\"System test create-issue-from-run\" \
+                        --title="System test create-issue-from-run" \
+                        --label="System test create-issue-from-run" \
                         --run-id=${{ github.run_id }} \
                         --kind=other
                     

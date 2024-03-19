@@ -44,8 +44,8 @@ jobs:
                         --no-duplicate \
                         --kind=other \
                         --repo=https://github.com/luftkode/ci-manager \
-                        --title=\"System test create-issue-from-run\" \
-                        --label=\"System test create-issue-from-run\" \
+                        --title="System test create-issue-from-run" \
+                        --label="System test create-issue-from-run" \
                         --run-id="${{ env.run_id }}"
                         
                     
