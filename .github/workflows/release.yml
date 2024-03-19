@@ -7,8 +7,10 @@ jobs:
     release:
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+            - uses: extractions/setup-just@v2
             - name: Publish
               run: |
                 just check-version
