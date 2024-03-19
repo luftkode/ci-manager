@@ -24,3 +24,7 @@ jobs:
           run: just audit --deny warnings
         - name: Test
           run: just --verbose ci_test
+        - name: Test auth required
+          run: just --verbose ci_auth_required_test
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

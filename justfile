@@ -110,5 +110,6 @@ ci_lint: \
     check-version \
 
 ci_test: \
-    (test "--verbose") \
-    test-github-auth-required
+    (test "--verbose")
+
+ci_auth_required_test: test-github-auth-required
