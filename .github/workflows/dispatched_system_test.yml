@@ -21,7 +21,9 @@ jobs:
     create-issue-on-run-failure:
 
         runs-on: ubuntu-latest
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        # You would typically do this
+        # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        # But because CI should not fail we run no matter what
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             run_id: ${{ github.event.workflow_run.id }}
@@ -29,6 +31,14 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - uses: extractions/setup-just@v2
+            - name: Variables for the triggering workflow
+              run: |
+                echo "run_id=${{ github.event.workflow_run.id }}"
+                echo "repo=${{ github.repository }}"
+                echo "workflow_run.conclusion=${{ github.event.workflow_run.conclusion }}"
+                echo "workflow_run.status=${{ github.event.workflow_run.status }}"
+                echo "workflow_run=${{ github.event.workflow_run }}"
+
             - name: build
               run: |
                 just --verbose build --release
@@ -43,7 +53,7 @@ jobs:
                         --trim-timestamp \
                         --no-duplicate \
                         --kind=other \
-                        --repo=https://github.com/luftkode/ci-manager \
+                        --repo=${{ github.repository }} \
                         --title="System test create-issue-from-run" \
                         --label="Dispatched system test" \
                         --run-id="${{ env.run_id }}"
