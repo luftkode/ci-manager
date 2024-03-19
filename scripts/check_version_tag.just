@@ -21,4 +21,4 @@ _latest_git_tag:
         echo "0.1.0"
         exit 0
     fi
-    git describe --tags $(git rev-list --tags --max-count=1)| grep --perl-regexp --only-matching "(?<=v).*"
+    git describe --tags --abbrev=0 | grep --perl-regexp --only-matching "(?<=v).*"
