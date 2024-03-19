@@ -10,4 +10,6 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
             - name: Publish
-              run: cargo publish --token ${{ secrets.CARGO_PUBLISH_TOKEN }}
+              run: |
+                just check-version
+                cargo publish --token ${{ secrets.CARGO_PUBLISH_TOKEN }}
