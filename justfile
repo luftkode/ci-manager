@@ -93,3 +93,7 @@ _ci_lint: \
     (format "-- --check --verbose") \
     (doc "--verbose") \
     check-version \
+
+_ci_test: \
+    (test "--verbose") \
+    test-coverage
