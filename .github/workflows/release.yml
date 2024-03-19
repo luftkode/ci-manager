@@ -49,11 +49,7 @@ jobs:
         - name: Install ARM Toolchain
           if: ${{ matrix.target == 'arm-unknown-linux-musleabihf' || matrix.target == 'armv7-unknown-linux-musleabihf' }}
           run: sudo apt-get update && sudo apt-get install gcc-arm-linux-gnueabihf            
-        
-        - name: Ref Type
-          id: ref-type
-          run: cargo run --package ref-type -- --reference ${{ github.ref }} >> $GITHUB_OUTPUT
-        
+
         - name: Package
           id: package
           env:
@@ -70,7 +66,6 @@ jobs:
           with:
             draft: false
             files: ${{ steps.package.outputs.archive }}
-            prerelease: ${{ steps.ref-type.outputs.value != 'release' }}
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
@@ -84,7 +79,6 @@ jobs:
           with:
             draft: false
             files: CHANGELOG.md
-            prerelease: ${{ steps.ref-type.outputs.value != 'release' }}
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
