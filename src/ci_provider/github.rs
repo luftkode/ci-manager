@@ -558,7 +558,7 @@ mod tests {
         assert_eq!(run.conclusion, Some("failure".to_string()));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_get_workflow_run_jobs() {
         GitHub::init().unwrap();
         let jobs = GitHub::get()
