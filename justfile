@@ -85,15 +85,14 @@ audit *ARGS:
     cargo audit {{ ARGS }}
 
 
-## CI specific
-
-_ci_lint: \
+## CI specific recipes (run these to check if the code passes CI)
+ci_lint: \
     (check "--verbose") \
     (lint "--verbose -- -D warnings --no-deps") \
     (format "-- --check --verbose") \
     (doc "--verbose") \
     check-version \
 
-_ci_test: \
+ci_test: \
     (test "--verbose") \
     test-coverage

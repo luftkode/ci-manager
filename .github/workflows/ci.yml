@@ -18,7 +18,7 @@ jobs:
         - uses: actions/checkout@v4
         - uses: extractions/setup-just@v2
         - name: Lint
-          run: just --verbose _ci_lint
+          run: just --verbose ci_lint
         
         - name: Test
-          run: just --verbose _ci_test
+          run: just --verbose ci_test
