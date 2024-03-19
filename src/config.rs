@@ -6,7 +6,7 @@ pub mod commands;
 pub static CONFIG: OnceLock<Config> = OnceLock::new();
 
 #[derive(Parser, Debug)]
-#[command(name = "CI manager - Make common CI tasks easy!")]
+#[command(name = "CI manager")]
 #[command(bin_name = "ci-manager", version, propagate_version = true, author, styles = config_styles())]
 #[command(about = "Manage CI")]
 pub struct Config {

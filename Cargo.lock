@@ -317,6 +317,8 @@ dependencies = [
  "clap_complete",
  "distance",
  "gitlab",
+ "http-body-util",
+ "hyper 1.2.0",
  "log",
  "octocrab",
  "once_cell",
