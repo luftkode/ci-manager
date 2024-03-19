@@ -18,7 +18,7 @@ jobs:
         steps:
         - uses: actions/checkout@v4
           with:
-            fetch-tags: true
+            fetch-depth: 0
         - uses: extractions/setup-just@v2
         - name: Lint
           run: just --verbose ci_lint
