@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2024-03-19
+
 ### Changed
 - Allow creating issues from workflows that didn't conclude in failure
 
