@@ -84,6 +84,22 @@ audit *ARGS:
     fi
     cargo audit {{ ARGS }}
 
+# These tests require a token with public repo read access
+test-github-auth-required *CARGO_TEST_ARGS:
+    #!/usr/bin/env bash
+    if [ -z "${GITHUB_TOKEN}" ]; then
+        {{PRINT}} red "GITHUB_TOKEN not found, please export it as an environment variable"
+        exit 1
+    fi
+    # Before adding tests here, confirm that it actually runs when you run
+    # $ cargo test <test_name> -- --exact --ignored
+    declare -a -r AUTH_REQUIRED_TESTS=(
+        "create_issue_from_failed_run_yocto"
+        "ci_provider::github::tests::test_download_workflow_run_logs"
+    )
+    for test in "${AUTH_REQUIRED_TESTS[@]}"; do
+        cargo test {{CARGO_TEST_ARGS}} "${test}" -- --exact --ignored | grep "running 1 test"
+    done
 
 ## CI specific recipes (run these to check if the code passes CI)
 ci_lint: \
@@ -94,4 +110,5 @@ ci_lint: \
     check-version \
 
 ci_test: \
-    (test "--verbose")
+    (test "--verbose") \
+    test-github-auth-required
