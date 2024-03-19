@@ -3,16 +3,9 @@ mod util;
 
 /// System test for the CI manager.
 
-const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
-fn set_github_token_for_pub_repo_access() {
-    std::env::set_var("GITHUB_TOKEN", KEY_WITH_PUBLIC_REPO_ACCESS);
-}
-
 #[test]
-#[ignore = "Not reliably authenticating with GitHub"]
+#[ignore = "Needs a valid GitHub token with public repo read access"]
 fn create_issue_from_failed_run_yocto() -> Result<(), Box<dyn Error>> {
-    set_github_token_for_pub_repo_access();
-
     let mut cmd = Command::cargo_bin("ci-manager")?;
 
     cmd.arg("--ci=github")

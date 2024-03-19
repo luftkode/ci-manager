@@ -83,7 +83,10 @@ impl GitHub {
         log::debug!("{workflow_run:?}");
 
         if workflow_run.conclusion != Some("failure".to_string()) {
-            bail!("Expected run from a failed workflow, but workflow did not fail");
+            log::info!(
+                "Workflow run didn't fail, but has conclusion: {:?}. Continuing...",
+                workflow_run.conclusion
+            );
         }
 
         let mut jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
@@ -578,11 +581,9 @@ mod tests {
     #[tokio::test]
     #[ignore = "Might fail when running with `cargo test` (If another test sets the GITHUB_TOKEN env var)"]
     async fn test_download_workflow_run_logs() {
-        const KEY_WITH_PUBLIC_REPO_ACCESS: &str = "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";
         let owner = "docker";
         let repo = "buildx";
         let run_id = RunId(8302026485);
-        env::set_var("GITHUB_TOKEN", KEY_WITH_PUBLIC_REPO_ACCESS);
         GitHub::init().unwrap();
         let logs = GitHub::get()
             .download_workflow_run_logs(owner, repo, run_id)
