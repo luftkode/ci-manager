@@ -94,5 +94,4 @@ ci_lint: \
     check-version \
 
 ci_test: \
-    (test "--verbose") \
-    test-coverage
+    (test "--verbose")
