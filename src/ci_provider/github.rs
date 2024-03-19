@@ -554,7 +554,8 @@ mod tests {
         assert_eq!(run.conclusion, Some("failure".to_string()));
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
+    #[ignore = "Needs a valid GITHUB_TOKEN with read access to public repos"]
     async fn test_get_workflow_run_jobs() {
         let jobs = GitHub::get()
             .workflow_run_jobs("gregerspoulsen", "artisan_tools", RunId(8172179418))

@@ -96,6 +96,7 @@ test-github-auth-required *CARGO_TEST_ARGS:
     declare -a -r AUTH_REQUIRED_TESTS=(
         "create_issue_from_failed_run_yocto"
         "ci_provider::github::tests::test_download_workflow_run_logs"
+        "ci_provider::github::tests::test_get_workflow_run_jobs"
     )
     for test in "${AUTH_REQUIRED_TESTS[@]}"; do
         cargo test {{CARGO_TEST_ARGS}} "${test}" -- --exact --ignored | grep "running 1 test"
