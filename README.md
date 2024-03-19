@@ -10,7 +10,16 @@ Manage and automate CI in more complex scenarious such as automatic issue creati
 
 # Installation
 
-Build from source or install with `cargo install ci-manager`
+Install with `cargo install ci-manager` if you have the Rust toolchain installed.
+
+On Windows or x86_64 linux, prebuilt binaries can be installed with:
+```shell
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/luftkode/ci-manager/main/scripts/install.sh | bash -s -- --to ~/bin
+```
+In CI you might just want to install into something you know is in path, to save you the trouble e.g.
+```shell
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/luftkode/ci-manager/main/scripts/install.sh | bash -s -- --to $(which curl)
+```
 
 # Usage
 Run `ci-manager --help` to get started.
