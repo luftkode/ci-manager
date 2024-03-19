@@ -103,14 +103,14 @@ test-github-auth-required *CARGO_TEST_ARGS:
     done
 
 ## CI specific recipes (run these to check if the code passes CI)
-ci_lint: \
+ci-lint: \
     (check "--verbose") \
     (lint "--verbose -- -D warnings --no-deps") \
     (format "-- --check --verbose") \
     (doc "--verbose") \
     check-version \
 
-ci_test: \
+ci-test: \
     (test "--verbose")
 
-ci_auth_required_test: test-github-auth-required
+ci-auth-required-test: test-github-auth-required

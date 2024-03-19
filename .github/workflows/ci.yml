@@ -21,12 +21,12 @@ jobs:
             fetch-depth: 0
         - uses: extractions/setup-just@v2
         - name: Lint
-          run: just --verbose ci_lint
+          run: just --verbose ci-lint
         - name: Audit
           run: just audit --deny warnings
         - name: Test
-          run: just --verbose ci_test
+          run: just --verbose ci-test
         - name: Test auth required
-          run: just --verbose ci_auth_required_test
+          run: just --verbose ci-auth-required-test
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
