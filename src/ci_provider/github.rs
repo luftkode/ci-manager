@@ -33,12 +33,10 @@ pub struct GitHub {
 impl GitHub {
     /// Get a reference to the global config
     pub fn get() -> &'static GitHub {
-        GITHUB_CLIENT
-            .get()
-            .expect("GITHUB_CLIENT is not initialized")
+        GITHUB_CLIENT.get_or_init(|| Self::init().expect("Failed to initialize GitHub client"))
     }
 
-    pub fn init() -> Result<()> {
+    fn init() -> Result<GitHub> {
         let github_client = match env::var("GITHUB_TOKEN") {
             Ok(token) => GitHub::new(&token)?,
             Err(e) => {
@@ -49,11 +47,10 @@ impl GitHub {
                 }
             }
         };
-        let _ = GITHUB_CLIENT.set(github_client);
-        Ok(())
+        Ok(github_client)
     }
 
-    pub fn new(token: &str) -> Result<Self> {
+    fn new(token: &str) -> Result<Self> {
         let client = Octocrab::builder()
             .personal_token(token.to_owned())
             .build()?;
@@ -496,7 +493,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_issues() {
-        GitHub::init().unwrap();
         let issues = GitHub::get()
             .issues_at(
                 "docker",
@@ -518,7 +514,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_issues_by_label() {
-        GitHub::init().unwrap();
         let issues = GitHub::get()
             .issues(
                 "docker",
@@ -535,7 +530,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_workflow_run() {
-        GitHub::init().unwrap();
         let run = GitHub::get()
             .workflow_run("gregerspoulsen", "artisan_tools", RunId(8172341325))
             .await
@@ -547,7 +541,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_workflow_failed_run() {
-        GitHub::init().unwrap();
         let run = GitHub::get()
             .workflow_run("gregerspoulsen", "artisan_tools", RunId(8172179418))
             .await
@@ -560,7 +553,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_get_workflow_run_jobs() {
-        GitHub::init().unwrap();
         let jobs = GitHub::get()
             .workflow_run_jobs("gregerspoulsen", "artisan_tools", RunId(8172179418))
             .await

@@ -97,6 +97,9 @@ pub fn init() -> Result<()> {
         }
     };
     stderrlog::new().verbosity(log_level).quiet(false).init()?;
+
+    log::debug!("Config: {:#?}", Config::global());
+
     if Config::global().dry_run() {
         log::warn!("Running in dry-run mode. No writes/changes will be made");
     }
