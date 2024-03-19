@@ -21,7 +21,9 @@ jobs:
     create-issue-on-run-failure:
 
         runs-on: ubuntu-latest
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        # You would typically do this
+        # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        # But because CI should not fail we run no matter what (we use continue-on-error)
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             run_id: ${{ github.event.workflow_run.id }}

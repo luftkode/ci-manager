@@ -9,6 +9,7 @@ on:
 jobs:
     failing-ci-manager-job:
         runs-on: ubuntu-latest
+        continue-on-error: true
         steps:
             # Checkout just to produce some typical output
             - uses: actions/checkout@v4
