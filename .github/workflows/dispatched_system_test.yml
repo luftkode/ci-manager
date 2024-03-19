@@ -1,4 +1,4 @@
-name: System test
+name: Dispatched System test
 
 permissions:
     issues: write
