@@ -15,7 +15,7 @@ echo "Installing rust toolchain for $TARGET..."
 rustup target add "$TARGET"
 
 echo "Building ci-manager..."
-RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static $TARGET_RUSTFLAGS" \
+RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static" \
     cargo build --bin ci-manager --target "$TARGET" --release
 EXECUTABLE=target/$TARGET/release/ci-manager
 
