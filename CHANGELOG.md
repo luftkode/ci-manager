@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.1] - 2024-03-19
 
-- Add packaging and installation script
+### Added
+
+- packaging and installation script
 
 ## [0.2.0] - 2024-03-19
 
