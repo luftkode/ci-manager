@@ -18,8 +18,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/luftkode/
 ```
 In CI you might just want to install into something you know is in path, to save you the trouble e.g.
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/luftkode/ci-manager/main/scripts/install.sh | bash -s -- --to $(which curl)
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/luftkode/ci-manager/main/scripts/install.sh | sudo bash -s -- --to $(dirname $(which curl)) --force
 ```
+Or some variation there of.
 
 # Usage
 Run `ci-manager --help` to get started.
