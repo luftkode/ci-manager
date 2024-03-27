@@ -4,7 +4,8 @@ pub mod util;
 
 use crate::{
     ci_provider::github::util::{
-        distance_to_other_issues, repo_url_to_run_url, run_url_to_job_url, JobErrorLog,
+        distance_to_other_issues, job_error_logs_from_log_and_failed_jobs_and_steps,
+        repo_url_to_run_url, run_url_to_job_url, JobErrorLog,
     },
     err_parse::parse_error_message,
     issue::FailedJob,
@@ -90,14 +91,19 @@ impl GitHub {
         }
 
         let mut jobs = self.workflow_run_jobs(&owner, &repo, RunId(run_id)).await?;
-        // Take only jobs from the most recent attempt
-        let mut max_attempt = 0;
-        for job in &jobs {
-            if job.run_attempt > max_attempt {
-                max_attempt = job.run_attempt;
-            }
+        log::info!("Got {} job(s) for the workflow run", jobs.len());
+        if jobs.is_empty() {
+            bail!("No jobs found for the workflow run");
         }
+
+        // Take only jobs from the most recent attempt
+        let max_attempt = jobs
+            .iter()
+            .max_by_key(|job| job.run_attempt)
+            .unwrap()
+            .run_attempt;
         jobs.retain(|job| job.run_attempt == max_attempt);
+
         let jobs = jobs; // Make immutable again
 
         let failed_jobs = jobs
@@ -149,30 +155,11 @@ impl GitHub {
             log::debug!("{log:?}");
         });
 
-        let mut job_error_logs: Vec<JobErrorLog> = Vec::new();
-
-        for job in failed_jobs {
-            log::info!("Extracting error logs for job: {}", job.name);
-            let name = job.name.clone();
-            let id = job.id;
-            let mut step_error_logs: Vec<util::StepErrorLog> = Vec::new();
-            for steps in &failed_steps {
-                log::info!("\tExtracting error logs for step: {}", steps.name);
-                let step_name = steps.name.clone();
-                let step_log = logs.iter().find(|log| {
-                    log.name.contains(steps.name.as_str()) && log.name.contains(job.name.as_str())
-                });
-                match step_log {
-                    Some(step_log) => step_error_logs
-                        .push(util::StepErrorLog::new(step_name, step_log.content.clone())),
-                    None => log::error!(
-                        "No log found for failed step: {step_name} in job: {job_name}. Continuing...",
-                        job_name = job.name
-                    ),
-                }
-            }
-            job_error_logs.push(JobErrorLog::new(id, name, step_error_logs));
-        }
+        let job_error_logs: Vec<JobErrorLog> = job_error_logs_from_log_and_failed_jobs_and_steps(
+            &logs,
+            failed_jobs.as_slice(),
+            &failed_steps,
+        );
 
         util::log_info_downloaded_job_error_logs(&job_error_logs);
 
