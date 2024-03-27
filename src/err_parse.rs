@@ -50,17 +50,24 @@ pub fn parse_error_message(
     workflow: WorkflowKind,
 ) -> anyhow::Result<ErrorMessageSummary> {
     let err_msg = if Config::global().trim_timestamp() {
-        log::info!("Trim timestamp set: Trimming the prefix timestamps from the log");
-        let trimmed = remove_timestamp_prefixes(err_msg).to_string();
-        trimmed
+        log::info!("Trimming timestamps from the log error message");
+        remove_timestamp_prefixes(err_msg)
     } else {
-        err_msg.to_owned()
+        err_msg.into()
     };
+    let err_msg = if Config::global().trim_ansi_codes() {
+        log::info!("Trimming ansi codes from the log error message");
+        remove_ansi_codes(&err_msg)
+    } else {
+        err_msg
+    };
+    let err_msg = err_msg.to_string();
+
     let err_msg = match workflow {
         WorkflowKind::Yocto => {
             ErrorMessageSummary::Yocto(yocto::parse_yocto_error(&err_msg).unwrap_or_else(|e| {
                 log::warn!("Failed to parse Yocto error, returning error message as is: {e}");
-                YoctoError::new(err_msg.to_string(), YoctoFailureKind::default(), None)
+                YoctoError::new(err_msg, YoctoFailureKind::default(), None)
             }))
         }
         WorkflowKind::Other => ErrorMessageSummary::Other(err_msg.to_string()),
