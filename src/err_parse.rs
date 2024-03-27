@@ -63,7 +63,7 @@ pub fn parse_error_message(
         log::info!("Trimming ansi codes from the log");
         remove_ansi_codes(&err_msg)
     } else {
-        err_msg.into()
+        err_msg
     };
     let err_msg = err_msg.to_string();
 
@@ -74,7 +74,7 @@ pub fn parse_error_message(
                 YoctoError::new(err_msg, YoctoFailureKind::default(), None)
             }))
         }
-        WorkflowKind::Other => ErrorMessageSummary::Other(err_msg),
+        WorkflowKind::Other => ErrorMessageSummary::Other(err_msg.to_string()),
     };
     Ok(err_msg)
 }
