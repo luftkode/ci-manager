@@ -106,6 +106,36 @@ pub fn remove_timestamps_and_ids(text: &str) -> borrow::Cow<str> {
     RE.replace_all(text, "")
 }
 
+/// Remove non-ASCII characters from a string
+/// # Example
+/// ```
+/// # use ci_manager::util::remove_non_ascii;
+/// # use pretty_assertions::assert_eq;
+/// let test_str = "stríng wøth nön-æscii chåråcters";
+/// let modified = remove_non_ascii(test_str);
+/// assert_eq!(modified, "strng wth nn-scii chrcters");
+/// ```
+pub fn remove_non_ascii(text: &str) -> borrow::Cow<str> {
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\x00-\x7F]+").unwrap());
+
+    RE.replace_all(text, "")
+}
+
+/// Remove ANSI codes from a string
+/// # Example
+/// ```
+/// # use ci_manager::util::remove_ansi_codes;
+/// # use pretty_assertions::assert_eq;
+/// let test_str = r#"[1;31mERROR:[0m Logfile of failure stored in"#;
+/// let modified = remove_ansi_codes(test_str);
+/// assert_eq!(modified, "ERROR: Logfile of failure stored in");
+/// ```
+pub fn remove_ansi_codes(text: &str) -> borrow::Cow<str> {
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\x1b\[[;\d]*[A-Za-z]").unwrap());
+
+    RE.replace_all(text, "")
+}
+
 /// Parse a log and remove line-prefixed timestamps in the format `YYYY-MM-DDTHH:MM:SS.0000000Z` (ISO 8601).
 /// # Example
 /// ```
