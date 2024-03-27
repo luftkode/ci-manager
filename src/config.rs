@@ -27,6 +27,9 @@ pub struct Config {
     /// Trim the prefix timestamp from the log output
     #[arg(long, global = true, default_value_t = false)]
     trim_timestamp: bool,
+    /// Trim the ansi codes from from the log output
+    #[arg(long, global = true, default_value_t = false)]
+    trim_ansi_codes: bool,
 }
 
 impl Config {
@@ -75,6 +78,11 @@ impl Config {
     /// Get the trim timestamp flag
     pub fn trim_timestamp(&self) -> bool {
         self.trim_timestamp
+    }
+
+    /// Get the trim ansi codes flag
+    pub fn trim_ansi_codes(&self) -> bool {
+        self.trim_ansi_codes
     }
 }
 
