@@ -49,18 +49,14 @@ pub fn parse_error_message(
     err_msg: &str,
     workflow: WorkflowKind,
 ) -> anyhow::Result<ErrorMessageSummary> {
-    let trim_timestamp = Config::global().trim_timestamp();
-    let trim_ansi_codes = Config::global().trim_ansi_codes();
-    log::debug!("Trim timestamp: {trim_timestamp}, Trim ansi codes: {trim_ansi_codes}");
-
-    let err_msg = if trim_timestamp {
-        log::info!("Trimming timestamp and ansi codes from the log");
+    let err_msg = if Config::global().trim_timestamp() {
+        log::info!("Trimming timestamps from the log error message");
         remove_timestamp_prefixes(err_msg)
     } else {
         err_msg.into()
     };
-    let err_msg = if trim_ansi_codes {
-        log::info!("Trimming ansi codes from the log");
+    let err_msg = if Config::global().trim_ansi_codes() {
+        log::info!("Trimming ansi codes from the log error message");
         remove_ansi_codes(&err_msg)
     } else {
         err_msg
