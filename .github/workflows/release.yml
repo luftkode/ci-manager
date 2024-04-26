@@ -30,7 +30,7 @@ jobs:
             fetch-depth: 0
         - name: Install musl-gcc
           if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
-          run: | 
+          run: |
             sudo apt-get update
             sudo apt-get install musl-tools
             musl-gcc --version
@@ -52,7 +52,7 @@ jobs:
             files: ${{ steps.package.outputs.archive }}
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
         - name: Publish Changelog
           uses: softprops/action-gh-release@v2.0.4
           if: >-

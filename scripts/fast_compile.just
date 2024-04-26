@@ -8,7 +8,7 @@ frun *ARGS: fbuild
     ./target/debug/ci-manager {{ ARGS }}
 
 # fast build with cranelift backend, mold linker, and parallel rustc frontend (not necessarily faster, but try it out)
-fbuild-alt $RUSTFLAGS="-Zcodegen-backend=cranelift -Zthreads=0": dep-fbuild (dep-cranelift "building with cranelift requires the cranelift backend to be installed") 
+fbuild-alt $RUSTFLAGS="-Zcodegen-backend=cranelift -Zthreads=0": dep-fbuild (dep-cranelift "building with cranelift requires the cranelift backend to be installed")
     RUSTFLAGS="${RUSTFLAGS} -Clinker=$(which clang) -Clink-arg=-fuse-ld=$(which mold)" cargo +nightly build --target x86_64-unknown-linux-gnu
 
 # Nightly build with cranelift backend, about 30% faster than the default, but only works on nightly and for debug builds

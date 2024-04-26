@@ -42,7 +42,7 @@ err() {
     if [ -n "${td-}" ]; then
         rm -rf "$td"
     fi
-    
+
     say "error: $*"
     exit 1
 }

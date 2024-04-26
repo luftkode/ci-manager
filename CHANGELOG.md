@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The `--trim-ansi-codes` flag removes ansi-codes from the log error message when creating issues from a failed run. 
+- The `--trim-ansi-codes` flag removes ansi-codes from the log error message when creating issues from a failed run.
 
 ## [0.2.1] - 2024-03-19
 

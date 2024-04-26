@@ -57,4 +57,3 @@ jobs:
                         --title="System test create-issue-from-run" \
                         --label="Dispatched system test" \
                         --run-id="${{ env.run_id }}"
-                        

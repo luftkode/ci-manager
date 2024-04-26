@@ -25,13 +25,13 @@ jobs:
 
         - name: Lint
           run: just --verbose ci-lint
-        
+
         - name: Audit
           run: just audit --deny warnings
-        
+
         - name: Test
           run: just --verbose ci-test
-        
+
         - name: Test auth required
           run: just --verbose ci-auth-required-test
           env:
