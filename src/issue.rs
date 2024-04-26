@@ -50,8 +50,8 @@ impl Issue {
         self.labels.as_slice()
     }
 
-    pub fn body(&self) -> String {
-        self.body.to_string()
+    pub fn body(&mut self) -> String {
+        self.body.to_markdown_string()
     }
 }
 
@@ -70,11 +70,9 @@ impl IssueBody {
             failed_jobs,
         }
     }
-}
 
-impl Display for IssueBody {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let output_str = format!(
+    pub fn to_markdown_string(&mut self) -> String {
+        let mut output_str = format!(
             "**Run ID**: {id} [LINK TO RUN]({run_url})
 
 **{failed_jobs_list_title}**
@@ -99,20 +97,26 @@ impl Display for IssueBody {
                     })
         );
         let output_len = output_str.len();
-        write!(f, "{output_str}")?;
+        let output_left_before_max = 65535 - output_len;
+        assert_ne!(self.failed_jobs.len(), 0);
+        let available_len_per_job = output_left_before_max / self.failed_jobs.len();
 
         let mut failed_jobs_str = String::new();
-        for job in &self.failed_jobs {
-            failed_jobs_str.push_str(&job.to_string());
-            if output_len + failed_jobs_str.len() > 65535 {
-                log::warn!("Issue body is too long, trimming");
-                failed_jobs_str.truncate(65535 - output_len);
-                break;
-            }
+        for job in self.failed_jobs.as_mut_slice() {
+            failed_jobs_str.push_str(job.to_markdown_formatted_limit(available_len_per_job));
         }
-        write!(f, "{failed_jobs_str}")?;
 
-        Ok(())
+        output_str.push_str(&failed_jobs_str);
+
+        // Final check if it is too long, if it is still too long, we failed to format it properly within the max length
+        // to still create an issue we do a dumb truncate as a last out
+        if output_str.len() > 65535 {
+            let remove_content_len = 65535 - output_str.len();
+            log::warn!("Failed to properly format issue body within content max length, truncating {remove_content_len} characters from the end of the issue body to fit within issue content limits");
+            output_str.truncate(remove_content_len);
+        }
+
+        output_str
     }
 }
 
@@ -123,6 +127,7 @@ pub struct FailedJob {
     url: String,
     failed_step: String,
     error_message: ErrorMessageSummary,
+    markdown_formatted: Option<String>,
 }
 
 impl FailedJob {
@@ -140,11 +145,96 @@ impl FailedJob {
             url,
             failed_step,
             error_message,
+            markdown_formatted: None,
         }
     }
 
     pub fn failure_label(&self) -> Option<String> {
         self.error_message.failure_label()
+    }
+
+    pub fn markdown_formatted_len(&mut self) -> usize {
+        if let Some(markdown_formatted_str) = self.markdown_formatted.as_deref() {
+            markdown_formatted_str.len()
+        } else {
+            // Format it and then check the length
+            self.to_markdown_formatted().len()
+        }
+    }
+
+    pub fn to_markdown_formatted(&mut self) -> &str {
+        if self.markdown_formatted.is_none() {
+            self.markdown_formatted = Some(self.to_string());
+        }
+        self.markdown_formatted.as_deref().unwrap()
+    }
+
+    pub fn to_markdown_formatted_limit(&mut self, max_len: usize) -> &str {
+        // If the formatting hasn't been done yet or it has been formatted resulting in a larger length than `max_len`, format it again to meet the max_len criteria.
+        if self.markdown_formatted.is_none()
+            || self
+                .markdown_formatted
+                .as_deref()
+                .is_some_and(|md| md.len() > max_len)
+        {
+            let summary = self.error_message.summary();
+            let optional_log = match (self.error_message.logfile_name(), self.error_message.log()) {
+                (Some(name), Some(contents)) => format!(
+                    "
+    <details>
+    <summary>{name}</summary>
+    <br>
+
+    ```
+    {contents}
+    ```
+    </details>"
+                ),
+                _ => String::from(""),
+            };
+            let mut formatted_preface_str: String = format!(
+                "
+### `{name}` (ID {id})
+**Step failed:** `{failed_step}`
+\\
+**Log:** {url}
+\\
+*Best effort error summary*:",
+                name = self.name,
+                id = self.id,
+                failed_step = self.failed_step,
+                url = self.url,
+            );
+            let orig_formatted_err_str = format!(
+                "\n```\n{error_message}```{optional_log}",
+                error_message = summary,
+            );
+            let preface_len = formatted_preface_str.len();
+            let formatted_err_str_len = orig_formatted_err_str.len();
+            let mkdown_len = preface_len + formatted_err_str_len;
+            if mkdown_len > max_len {
+                let len_diff = mkdown_len - max_len;
+                let target_formatted_err_str_len = orig_formatted_err_str.len() - len_diff;
+                let error_message = summary.to_string();
+                debug_assert!(error_message.len() >= len_diff);
+                let formatted_err_str = if error_message.len() >= len_diff {
+                    let (_, error_message) = error_message.split_at(len_diff);
+                    let formatted_err_str = format!("\n```\n{error_message}```{optional_log}",);
+                    debug_assert_eq!(formatted_err_str.len(), target_formatted_err_str_len);
+                    formatted_err_str
+                } else {
+                    // Removing the error message is not enough to reach the target max_len so instead we remove the error summary completely
+                    "(content > max len)".to_string()
+                };
+                formatted_preface_str.push_str(&formatted_err_str);
+            } else {
+                formatted_preface_str.push_str(&orig_formatted_err_str);
+            }
+            let final_mkdown = formatted_preface_str;
+            self.markdown_formatted = Some(final_mkdown);
+        }
+
+        self.markdown_formatted.as_deref().unwrap()
     }
 }
 
@@ -278,8 +368,8 @@ Yocto error: ERROR: No recipes available for: ...
             ),
             ];
 
-        let issue_body = IssueBody::new(run_id, run_link, failed_jobs);
-        assert_eq!(issue_body.to_string(), EXAMPLE_ISSUE_BODY);
+        let mut issue_body = IssueBody::new(run_id, run_link, failed_jobs);
+        assert_eq!(issue_body.to_markdown_string(), EXAMPLE_ISSUE_BODY);
         //std::fs::write("test2.md", issue_body.to_string()).unwrap();
     }
 }

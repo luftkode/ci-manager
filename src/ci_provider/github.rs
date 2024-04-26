@@ -183,7 +183,7 @@ impl GitHub {
             })
             .collect();
 
-        let issue = issue::Issue::new(
+        let mut issue = issue::Issue::new(
             title.to_owned(),
             run_id.to_string(),
             run_url,
@@ -291,14 +291,20 @@ impl GitHub {
     }
 
     /// Create an issue
-    pub async fn create_issue(&self, owner: &str, repo: &str, issue: issue::Issue) -> Result<()> {
+    pub async fn create_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        mut issue: issue::Issue,
+    ) -> Result<()> {
+        let body_str = issue.body();
         log::debug!(
             "Creating issue for {owner}/{repo} with\n\
         \ttitle:  {title}\n\
         \tlabels: {labels:?}\n\
         \tbody:   {body}",
             title = issue.title(),
-            body = issue.body(),
+            body = body_str,
             labels = issue.labels()
         );
         // The maximum size of a GitHub issue body is 65536
