@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2024-04-26
+
+### Changed
+- Update dependencies
+- Update dependencies to `rustls` vulnerability: [RUSTSEC-2024-0336](https://rustsec.org/advisories/RUSTSEC-2024-0336)
+
 ## [0.3.1] - 2024-04-26
 
 ### Added
