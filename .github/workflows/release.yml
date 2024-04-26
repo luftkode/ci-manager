@@ -73,7 +73,7 @@ jobs:
               with:
                 fetch-depth: 0
             - uses: extractions/setup-just@v2
+            - name: Check version
+              run: just --verbose check-version
             - name: Publish
-              run: |
-                just check-version
-                cargo publish --token ${{ secrets.CARGO_PUBLISH_TOKEN }}
+              run: cargo publish --token ${{ secrets.CARGO_PUBLISH_TOKEN }}
