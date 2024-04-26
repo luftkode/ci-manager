@@ -15,6 +15,7 @@ PROMPT := join(justfile_directory(), 'scripts/prompt.just') + " prompt"
     just --list
 
 # Run Full checks and format
+[no-exit-message]
 full-check: run-pre-commit lint format check test
 
 # Needs the rust toolchain
@@ -23,22 +24,27 @@ env:
     cargo --version
 
 # Lint the code
+[no-exit-message]
 lint *ARGS="-- -D warnings --no-deps":
     cargo clippy {{ ARGS }}
 
 # Run pre-commit on all files
+[no-exit-message]
 run-pre-commit:
     pre-commit run --all-files
 
 # Format the code
+[no-exit-message]
 format *ARGS:
     cargo fmt {{ ARGS }}
 
 # Check if it compiles without compiling
+[no-exit-message]
 check *ARGS:
     cargo check {{ ARGS }}
 
 # Run the tests
+[no-exit-message]
 test *ARGS:
     cargo test {{ ARGS }}
 
@@ -107,7 +113,7 @@ ci-lint: \
     (check "--verbose") \
     (lint "--verbose -- -D warnings --no-deps") \
     (format "-- --check --verbose") \
-    (doc "--verbose") \
+    (doc "--verbose --no-deps") \
     check-version \
 
 ci-test: \
