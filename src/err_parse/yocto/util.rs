@@ -20,6 +20,10 @@ pub enum YoctoFailureKind {
     /// Other tasks
     #[strum(serialize = "do_fetch")]
     DoFetch,
+    #[strum(serialize = "do_rootfs")]
+    DoRootFs,
+    #[strum(serialize = "do_image")]
+    DoImage,
     /// If it's a type of failure we're not familiar with or parsing fails, default to this
     #[default]
     #[strum(serialize = "misc")]
