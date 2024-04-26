@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2024-04-26
+
+### Added
+- Yocto failures now recognizes the two additional tasks `do_rootfs` & `do_image`
+
 ## [0.3.0] - 2024-03-27
 
 ### Added
