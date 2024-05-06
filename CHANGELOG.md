@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2024-05-06
+
+### Added
+
+- Allow quiet installations in GitHub CI (default is to echo all script commands)
+
 ## [0.4.0] - 2024-04-26
 
 ### Added
