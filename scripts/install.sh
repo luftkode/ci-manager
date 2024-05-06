@@ -4,7 +4,8 @@
 
 set -eu
 
-if [ -n "${GITHUB_ACTIONS-}" ]; then
+# Echo commands if the GITHUB_ACTIONS variable is set and INSTALL_QUIET is NOT set.
+if [ -n "${GITHUB_ACTIONS-}" ] && [ -z "${INSTALL_QUIET-}" ]; then
     set -x
 fi
 
