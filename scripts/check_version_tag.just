@@ -1,8 +1,8 @@
 # Check that the version specified in Cargo.toml matches the latest git tag version
 check-version:
     #!/usr/bin/env bash
-    set -euo pipefail
-    git fetch --tags
+    set -euxo pipefail
+    git fetch --tags || echo "Skipping fetch tags"
     cargo_ver=$( just _get_cargo_toml_version )
     git_tag_ver=$( just _latest_git_tag )
     if [[ ${cargo_ver} != ${git_tag_ver} ]]; then
