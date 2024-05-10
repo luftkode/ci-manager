@@ -8,7 +8,7 @@ use crate::{
         repo_url_to_run_url, run_url_to_job_url, JobErrorLog,
     },
     err_parse::parse_error_message,
-    issue::FailedJob,
+    issue::{FailedJob, FirstFailedStep},
     *,
 };
 use hyper::body;
@@ -171,7 +171,14 @@ impl GitHub {
                 let job_id_str = job.job_id.to_string();
                 let job_url = run_url_to_job_url(&run_url, &job_id_str);
                 let continuous_errorlog_msgs = job.logs_as_str();
-                let first_failed_step = job.failed_step_logs.first().unwrap().step_name.to_owned();
+                let first_failed_step: FirstFailedStep = match job.failed_step_logs.first() {
+                    Some(first_failed_step_log) => {
+                        FirstFailedStep::StepName(first_failed_step_log.step_name.to_owned())
+                    }
+                    // This can happen if the job times out while waiting for a runner to pick it up
+                    // Relevant issue: https://github.com/luftkode/ci-manager/issues/4
+                    None => FirstFailedStep::NoStepsExecuted,
+                };
                 let parsed_msg = parse_error_message(&continuous_errorlog_msgs, *kind).unwrap();
                 FailedJob::new(
                     job.job_name.to_owned(),
