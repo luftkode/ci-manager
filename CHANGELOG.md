@@ -10,15 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - 2024-04-26
 
 ### Added
+
 - Smarter markdown truncating on issue bodies exceeding max content length
 
 ### Changed
+
 - Update dependencies
 - Update dependencies to `rustls` vulnerability: [RUSTSEC-2024-0336](https://rustsec.org/advisories/RUSTSEC-2024-0336)
 
 ## [0.3.1] - 2024-04-26
 
 ### Added
+
 - Yocto failures now recognizes the two additional tasks `do_rootfs` & `do_image`
 
 ## [0.3.0] - 2024-03-27
@@ -36,12 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2024-03-19
 
 ### Changed
+
 - Allow creating issues from workflows that didn't conclude in failure
 
 ## [0.1.1] - 2024-03-18
 
 ### Fixed
+
 - crash on unable to find logs for a failed step, now logs an error and continues.
 
 ## [0.1.0] - 2024-03-18
+
 Feature parity with [GitHub Workflow Parser](https://crates.io/crates/gh-workflow-parser)
