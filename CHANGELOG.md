@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2024-05-10
+
+### Added
+
+- Handling of and *issue formatting* for failed jobs that timed out because they were never picked up by a runner.
+
+### Fixed
+
+- The new feature fixes [issue 4](https://github.com/luftkode/ci-manager/issues/4)
+
+### Changed
+
+- Update dependencies
+
 ## [0.4.1] - 2024-05-06
 
 ### Added

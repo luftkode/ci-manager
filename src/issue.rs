@@ -4,9 +4,9 @@
 //! in a repository. It contains a title, label, and body. The body is a
 //! collection of FailedJob structs, which contain information about the failed
 //! jobs in a GitHub Actions workflow run.
-use std::fmt::{self, Display, Formatter, Write};
-
 use crate::{ensure_https_prefix, err_parse::ErrorMessageSummary};
+use anyhow::Ok;
+use std::fmt::{self, Display, Formatter, Write};
 
 pub mod similarity;
 
@@ -120,12 +120,27 @@ impl IssueBody {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FirstFailedStep {
+    NoStepsExecuted,
+    StepName(String),
+}
+
+impl fmt::Display for FirstFailedStep {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            FirstFailedStep::NoStepsExecuted => write!(f, "No Steps were executed"),
+            FirstFailedStep::StepName(step_name) => write!(f, "{step_name}"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct FailedJob {
     name: String,
     id: String,
     url: String,
-    failed_step: String,
+    failed_step: FirstFailedStep,
     error_message: ErrorMessageSummary,
     markdown_formatted: Option<String>,
 }
@@ -135,7 +150,7 @@ impl FailedJob {
         name: String,
         id: String,
         mut url: String,
-        failed_step: String,
+        failed_step: FirstFailedStep,
         error_message: ErrorMessageSummary,
     ) -> Self {
         ensure_https_prefix(&mut url);
@@ -197,18 +212,27 @@ impl FailedJob {
 ### `{name}` (ID {id})
 **Step failed:** `{failed_step}`
 \\
-**Log:** {url}
-\\
-*Best effort error summary*:",
+**Log:** {url}",
                 name = self.name,
                 id = self.id,
                 failed_step = self.failed_step,
                 url = self.url,
             );
-            let orig_formatted_err_str = format!(
-                "\n```\n{error_message}```{optional_log}",
-                error_message = summary,
-            );
+
+            let orig_formatted_err_str = if self.failed_step == FirstFailedStep::NoStepsExecuted {
+                "".to_string()
+            } else {
+                // Only add the `Best effort error summary` text if steps were actually executed
+                formatted_preface_str.push_str(
+                    "
+\\
+*Best effort error summary*:",
+                );
+                format!(
+                    "\n```\n{error_message}```{optional_log}",
+                    error_message = summary,
+                )
+            };
             let preface_len = formatted_preface_str.len();
             let formatted_err_str_len = orig_formatted_err_str.len();
             let mkdown_len = preface_len + formatted_err_str_len;
@@ -317,7 +341,7 @@ Yocto error: ERROR: No recipes available for: ...
                 "Test template xilinx".to_string(),
                 "21442749267".to_string(),
                 "https://github.com/luftkode/distro-template/actions/runs/7850874958/job/21442749267".to_string(),
-                "📦 Build yocto image".to_string(),
+                FirstFailedStep::StepName("📦 Build yocto image".to_owned()),
                 ErrorMessageSummary::Other("Yocto error: ERROR: No recipes available for: ...
 ".to_string()),
             ),
@@ -325,7 +349,7 @@ Yocto error: ERROR: No recipes available for: ...
                 "Test template raspberry".to_string(),
                 "21442749166".to_string(),
                 "https://github.com/luftkode/distro-template/actions/runs/7850874958/job/21442749166".to_string(),
-                "📦 Build yocto image".to_string(),
+                FirstFailedStep::StepName("📦 Build yocto image".to_owned()),
                 ErrorMessageSummary::Other("Yocto error: ERROR: No recipes available for: ...
 ".to_string()),
             ),
@@ -354,7 +378,7 @@ Yocto error: ERROR: No recipes available for: ...
                 "Test template xilinx".to_string(),
                 "21442749267".to_string(),
                 "https://github.com/luftkode/distro-template/actions/runs/7850874958/job/21442749267".to_string(),
-                "📦 Build yocto image".to_string(),
+                FirstFailedStep::StepName("📦 Build yocto image".to_owned()),
                 ErrorMessageSummary::Other("Yocto error: ERROR: No recipes available for: ...
 ".to_string()),
             ),
@@ -362,7 +386,7 @@ Yocto error: ERROR: No recipes available for: ...
                 "Test template raspberry".to_string(),
                 "21442749166".to_string(),
                 "https://github.com/luftkode/distro-template/actions/runs/7850874958/job/21442749166".to_string(),
-                "📦 Build yocto image".to_string(),
+                FirstFailedStep::StepName("📦 Build yocto image".to_owned()),
                 ErrorMessageSummary::Other("Yocto error: ERROR: No recipes available for: ...
 ".to_string()),
             ),
@@ -370,6 +394,6 @@ Yocto error: ERROR: No recipes available for: ...
 
         let mut issue_body = IssueBody::new(run_id, run_link, failed_jobs);
         assert_eq!(issue_body.to_markdown_string(), EXAMPLE_ISSUE_BODY);
-        //std::fs::write("test2.md", issue_body.to_string()).unwrap();
+        //std::fs::write("test2.md", issue_body.to_markdown_string()).unwrap();
     }
 }
