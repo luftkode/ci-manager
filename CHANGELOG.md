@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The new feature fixes [issue 4](https://github.com/luftkode/ci-manager/issues/4)
 
+### Changed
+
+- Update dependencies
+
 ## [0.4.1] - 2024-05-06
 
 ### Added
