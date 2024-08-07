@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2024-08-07
+
+### Fix
+
+- Bugged indent when writing the `details` drop down on issue which messed up how it is displayed on a created github issue.
+
+### Misc
+
+- Update dependencies
+
 ## [0.5.0] - 2024-05-10
 
 ### Added
