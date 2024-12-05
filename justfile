@@ -12,7 +12,7 @@ PROMPT := join(justfile_directory(), 'scripts/prompt.just') + " prompt"
 
 [private]
 @default:
-    just --list
+    just --list --no-aliases
 
 # Run Full checks and format
 [no-exit-message]
