@@ -1,6 +1,6 @@
 [package]
 name = "ci-manager"
-version = "0.5.2"
+version = "0.5.3"
 documentation = "https://docs.rs/ci-manager"
 edition = "2021"
 readme = "README.md"
