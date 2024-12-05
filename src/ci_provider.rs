@@ -21,7 +21,7 @@ impl CIProvider {
         env::var("GITHUB_ENV").is_ok()
     }
 
-    pub fn from_enviroment() -> Result<Self> {
+    pub fn from_environment() -> Result<Self> {
         if Self::env_is_github() {
             Ok(Self::GitHub)
         } else {
