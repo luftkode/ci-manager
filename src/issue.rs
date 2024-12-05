@@ -196,14 +196,15 @@ impl FailedJob {
             let optional_log = match (self.error_message.logfile_name(), self.error_message.log()) {
                 (Some(name), Some(contents)) => format!(
                     "
-    <details>
-    <summary>{name}</summary>
-    <br>
+<details>
+<summary>{name}</summary>
+<br>
 
-    ```
-    {contents}
-    ```
-    </details>"
+```
+{contents}
+```
+
+</details>"
                 ),
                 _ => String::from(""),
             };
