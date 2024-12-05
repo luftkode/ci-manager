@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3]
+
+### Changed
+
+- Minor bumps on some dependencies
+- The little GitLab support there was has now been removed
+
+## [0.5.2]
+
 ### Changed
 
 - Update dependencies

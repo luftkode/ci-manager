@@ -33,7 +33,7 @@ pub async fn run() -> Result<()> {
     let ci_provider = if let Some(ci_provider) = Config::global().no_ci() {
         ci_provider
     } else {
-        ci_provider::CIProvider::from_enviroment()?
+        ci_provider::CIProvider::from_environment()?
     };
 
     log::info!("CI provider: {ci_provider}");

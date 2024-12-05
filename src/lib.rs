@@ -26,16 +26,6 @@ pub(crate) use {
     },
     strum::*,
 };
-// Imports for the Gitlab API v3
-pub(crate) use gitlab::{
-    api::{
-        self,
-        issues::ProjectIssues,
-        projects::{self, issues, jobs},
-        Query,
-    },
-    Gitlab,
-};
 
 /// Module containing macros related to protocol words.
 pub mod macros {

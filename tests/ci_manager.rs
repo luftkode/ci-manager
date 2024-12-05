@@ -67,7 +67,7 @@ other contents",
 
     // Now we should be able to retrieve the `foobar` string from the file by locating it through the log string
     let mut cmd = Command::cargo_bin("ci-manager")?;
-    cmd.arg("--ci=gitlab")
+    cmd.arg("--ci=github")
         .arg("locate-failure-log")
         .arg("--input-file")
         .arg(test_log_file.path())
